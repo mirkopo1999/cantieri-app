@@ -18,8 +18,7 @@
     input, select { width: 100%; padding: 11px 14px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; margin-bottom: 10px; }
     button { width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
     .btn-add { background: #ff6b00; color: white; }
-    .btn-entrata { background: #34c759; color: white; }
-    .btn-uscita { background: #ff3b30; color: white; }
+    .btn-lavoro { background: #34c759; color: white; }
     .btn-rep { background: #5856d6; color: white; }
     .btn-ferie { background: #007aff; color: white; }
     .btn-permesso { background: #ff9500; color: white; }
@@ -36,8 +35,7 @@
     .log-data { font-weight: 600; color: #333; }
     .log-dettaglio { color: #666; margin-top: 2px; }
     .badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-right: 6px; }
-    .badge-entrata { background: #d4f5dc; color: #1a7a2e; }
-    .badge-uscita { background: #ffd5d3; color: #a30000; }
+    .badge-lavoro { background: #d4f5dc; color: #1a7a2e; }
     .badge-rep { background: #e0dfff; color: #3634a3; }
     .badge-ferie { background: #d0e8ff; color: #004080; }
     .badge-permesso { background: #fff0d4; color: #a35c00; }
@@ -45,10 +43,11 @@
     .badge-spese { background: #fff0d4; color: #a35c00; }
     .empty { text-align: center; color: #aaa; font-size: 14px; padding: 16px 0; }
     .label { font-size: 13px; color: #666; margin-bottom: 4px; margin-top: 2px; }
-    .tecnico-attivo { font-size: 13px; color: #ff6b00; font-weight: 600; margin-bottom: 10px; }
+    .tecnico-attivo { font-size: 13px; color: #ff6b00; font-weight: 600; margin-bottom: 4px; }
     .divider { border: none; border-top: 1px solid #f0f0f0; margin: 8px 0; }
     .row2 { display: flex; gap: 8px; }
     .row2 > * { flex: 1; }
+    .data-globale { background: #fff8f4; border: 1px solid #ff6b00; border-radius: 10px; padding: 12px 14px; margin-bottom: 0; font-size: 15px; font-weight: 600; color: #ff6b00; }
   </style>
 </head>
 <body>
@@ -68,6 +67,13 @@
     <div class="tecnico-attivo" id="tecnico-attivo"></div>
   </div>
 
+  <!-- DATA GLOBALE -->
+  <div class="card">
+    <h2>📅 Data selezionata</h2>
+    <p class="label">Cambia qui la data — si aggiorna ovunque</p>
+    <input type="date" id="data-globale" class="data-globale" onchange="sincronizzaDate(this.value)">
+  </div>
+
   <!-- AGGIUNGI CANTIERE -->
   <div class="card">
     <h2>📍 Aggiungi Cantiere</h2>
@@ -81,40 +87,31 @@
     <div id="lista-cantieri"><p class="empty">Nessun cantiere aggiunto</p></div>
   </div>
 
-  <!-- REGISTRA INGRESSO / USCITA -->
+  <!-- REGISTRA LAVORO -->
   <div class="card">
-    <h2>🕐 Registra Movimento</h2>
+    <h2>🏗 Registra Giornata Lavorativa</h2>
     <p class="label">Cantiere</p>
     <select id="cantiere-selezionato">
       <option value="">— Seleziona cantiere —</option>
     </select>
-    <div class="row2">
-      <div>
-        <p class="label">Data</p>
-        <input type="date" id="data-movimento">
-      </div>
-      <div>
-        <p class="label">Ora</p>
-        <input type="time" id="ora-movimento">
-      </div>
-    </div>
+    <p class="label">Data</p>
+    <input type="date" id="data-movimento" onchange="sincronizzaDate(this.value)">
     <p class="label">Straordinari (ore)</p>
     <input type="number" id="straordinari" placeholder="es. 2" min="0" step="0.5">
-    <button class="btn-entrata" onclick="registra('entrata')">▶ Registra Entrata</button>
-    <button class="btn-uscita" onclick="registra('uscita')">■ Registra Uscita</button>
+    <button class="btn-lavoro" onclick="registraLavoro()">✅ Registra Giornata</button>
   </div>
 
   <!-- ASSENZE -->
   <div class="card">
     <h2>📋 Assenze / Permessi</h2>
     <p class="label">Data</p>
-    <input type="date" id="data-assenza">
+    <input type="date" id="data-assenza" onchange="sincronizzaDate(this.value)">
     <button class="btn-ferie" onclick="registraAssenza('ferie')">🏖 Ferie</button>
     <button class="btn-permesso" onclick="registraAssenza('permesso')">📝 Permesso</button>
     <button class="btn-malattia" onclick="registraAssenza('malattia')">🤒 Malattia</button>
     <hr class="divider">
     <p class="label">Reperibilità</p>
-    <input type="date" id="data-reperibilita">
+    <input type="date" id="data-reperibilita" onchange="sincronizzaDate(this.value)">
     <button class="btn-rep" onclick="registraReperibilita()">📞 Segna Reperibilità</button>
   </div>
 
@@ -122,7 +119,7 @@
   <div class="card">
     <h2>💶 Rimborso Spese</h2>
     <p class="label">Data</p>
-    <input type="date" id="data-spesa">
+    <input type="date" id="data-spesa" onchange="sincronizzaDate(this.value)">
     <p class="label">Descrizione</p>
     <input type="text" id="desc-spesa" placeholder="es. Carburante, Autostrada...">
     <p class="label">Importo (€)</p>
@@ -155,13 +152,21 @@
   document.getElementById('data-oggi').textContent = oggi.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
   const dataOggiISO = oggi.toISOString().split('T')[0];
-  const oraOggi = oggi.toTimeString().slice(0,5);
+  sincronizzaDateIniziale(dataOggiISO);
 
-  document.getElementById('data-movimento').value = dataOggiISO;
-  document.getElementById('ora-movimento').value = oraOggi;
-  document.getElementById('data-spesa').value = dataOggiISO;
-  document.getElementById('data-reperibilita').value = dataOggiISO;
-  document.getElementById('data-assenza').value = dataOggiISO;
+  function sincronizzaDateIniziale(val) {
+    ['data-globale','data-movimento','data-assenza','data-reperibilita','data-spesa'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    });
+  }
+
+  function sincronizzaDate(val) {
+    ['data-globale','data-movimento','data-assenza','data-reperibilita','data-spesa'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.value !== val) el.value = val;
+    });
+  }
 
   // Popola mese/anno export
   const mesiNomi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
@@ -169,8 +174,7 @@
   const selAnno = document.getElementById('anno-export');
   mesiNomi.forEach((m, i) => {
     const opt = document.createElement('option');
-    opt.value = i + 1;
-    opt.textContent = m;
+    opt.value = i + 1; opt.textContent = m;
     if (i === oggi.getMonth()) opt.selected = true;
     selMese.appendChild(opt);
   });
@@ -237,20 +241,21 @@
       cantieri.map(c => `<option value="${c}">${c}</option>`).join('');
   }
 
-  function registra(tipo) {
+  function registraLavoro() {
     const cantiere = document.getElementById('cantiere-selezionato').value;
     if (!cantiere) return alert('Seleziona un cantiere');
     const dataISO = document.getElementById('data-movimento').value;
-    const ora = document.getElementById('ora-movimento').value;
     const straordinari = document.getElementById('straordinari').value;
-    if (!dataISO || !ora) return alert('Inserisci data e ora');
+    if (!dataISO) return alert('Seleziona una data');
+    const giàPresente = log.find(l => l.dataISO === dataISO && l.tipo === 'lavoro' && l.cantiere === cantiere);
+    if (giàPresente) return alert('Giornata già registrata per questo cantiere');
     const data = new Date(dataISO + 'T12:00:00').toLocaleDateString('it-IT');
     const id = Date.now();
-    log.unshift({ id, data, dataISO, ora, cantiere, tecnico, tipo, straordinari: straordinari || '' });
+    log.unshift({ id, data, dataISO, cantiere, tecnico, tipo: 'lavoro', straordinari: straordinari || '' });
     salva();
     renderReport();
     document.getElementById('straordinari').value = '';
-    alert((tipo === 'entrata' ? '✅ Entrata' : '🔴 Uscita') + ' registrata — ' + data + ' ore ' + ora);
+    alert('✅ Giornata registrata — ' + data + ' — ' + cantiere);
   }
 
   function registraAssenza(tipo) {
@@ -260,7 +265,7 @@
     const giàPresente = log.find(l => l.dataISO === dataISO && l.tipo === tipo);
     if (giàPresente) return alert(tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' già segnata per ' + data);
     const id = Date.now();
-    log.unshift({ id, data, dataISO, ora: '', cantiere: '', tecnico, tipo });
+    log.unshift({ id, data, dataISO, cantiere: '', tecnico, tipo });
     salva();
     renderReport();
     const etichette = { ferie: '🏖 Ferie', permesso: '📝 Permesso', malattia: '🤒 Malattia' };
@@ -274,7 +279,7 @@
     const giàPresente = log.find(l => l.dataISO === dataISO && l.tipo === 'reperibilità');
     if (giàPresente) return alert('Reperibilità già segnata per ' + data);
     const id = Date.now();
-    log.unshift({ id, data, dataISO, ora: '', cantiere: '', tecnico, tipo: 'reperibilità' });
+    log.unshift({ id, data, dataISO, cantiere: '', tecnico, tipo: 'reperibilità' });
     salva();
     renderReport();
     alert('📅 Reperibilità segnata per ' + data);
@@ -289,7 +294,7 @@
     if (isNaN(importo) || importo <= 0) return alert('Inserisci un importo valido');
     const data = new Date(dataISO + 'T12:00:00').toLocaleDateString('it-IT');
     const id = Date.now();
-    log.unshift({ id, data, dataISO, ora: '', cantiere: desc, tecnico, tipo: 'spesa', importo });
+    log.unshift({ id, data, dataISO, cantiere: desc, tecnico, tipo: 'spesa', importo });
     salva();
     renderReport();
     document.getElementById('desc-spesa').value = '';
@@ -307,23 +312,17 @@
   function renderReport() {
     const div = document.getElementById('report');
     if (log.length === 0) { div.innerHTML = '<p class="empty">Nessuna registrazione ancora</p>'; return; }
-    const logOrdinato = [...log].sort((a, b) => (b.dataISO || '').localeCompare(a.dataISO || '') || (b.ora || '').localeCompare(a.ora || ''));
-    const badge = {
-      entrata: 'badge-entrata', uscita: 'badge-uscita', reperibilità: 'badge-rep',
-      ferie: 'badge-ferie', permesso: 'badge-permesso', malattia: 'badge-malattia', spesa: 'badge-spese'
-    };
-    const label = {
-      entrata: 'Entrata', uscita: 'Uscita', reperibilità: 'Reperibilità',
-      ferie: 'Ferie', permesso: 'Permesso', malattia: 'Malattia', spesa: 'Spesa'
-    };
+    const logOrdinato = [...log].sort((a, b) => (b.dataISO || '').localeCompare(a.dataISO || ''));
+    const badge = { lavoro: 'badge-lavoro', reperibilità: 'badge-rep', ferie: 'badge-ferie', permesso: 'badge-permesso', malattia: 'badge-malattia', spesa: 'badge-spese' };
+    const label = { lavoro: 'Lavorato', reperibilità: 'Reperibilità', ferie: 'Ferie', permesso: 'Permesso', malattia: 'Malattia', spesa: 'Spesa' };
     div.innerHTML = logOrdinato.map(r => {
       let dettaglio = `<span class="badge ${badge[r.tipo] || ''}">${label[r.tipo] || r.tipo}</span>`;
       if (r.tipo === 'spesa') dettaglio += `${r.cantiere} — <strong>€${parseFloat(r.importo).toFixed(2)}</strong>`;
       else if (r.cantiere) dettaglio += r.cantiere;
-      if (r.tecnico) dettaglio += ` — ${r.tecnico}`;
+      if (r.straordinari) dettaglio += ` — Straord: ${r.straordinari}h`;
       return `<div class="log-item">
         <div style="flex:1">
-          <div class="log-data">${r.data}${r.ora ? ' — ' + r.ora : ''}</div>
+          <div class="log-data">${r.data}</div>
           <div class="log-dettaglio">${dettaglio}</div>
         </div>
         <button class="delete-btn" onclick="eliminaEvento(${r.id})">✕</button>
@@ -333,19 +332,16 @@
 
   function esportaPDF() {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); // landscape A4
-
+    const doc = new jsPDF('l', 'mm', 'a4');
     const mese = parseInt(document.getElementById('mese-export').value);
     const anno = parseInt(document.getElementById('anno-export').value);
     const nomeMese = mesiNomi[mese - 1].toUpperCase();
     const giorniNelMese = new Date(anno, mese, 0).getDate();
     const giorniSett = ['DOM','LUN','MAR','MER','GIO','VEN','SAB'];
-
     const parti = tecnico.trim().split(' ');
     const cognome = parti.length > 1 ? parti.slice(1).join(' ').toUpperCase() : tecnico.toUpperCase();
     const nome = parti.length > 0 ? parti[0].toUpperCase() : '';
 
-    // Header
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text(nomeMese + ' ' + anno, 14, 12);
@@ -355,7 +351,6 @@
     doc.text('NOME: ' + nome, 120, 20);
     doc.text('MATR: ____________', 210, 20);
 
-    // Costruzione righe
     const prefisso = `${anno}-${String(mese).padStart(2,'0')}`;
     const rows = [];
 
@@ -364,77 +359,50 @@
       const dayObj = new Date(dataISO + 'T12:00:00');
       const dayName = giorniSett[dayObj.getDay()];
       const eventiGiorno = log.filter(l => l.dataISO === dataISO);
-
-      const lavorato = eventiGiorno.find(e => e.tipo === 'entrata');
+      const lavorato = eventiGiorno.find(e => e.tipo === 'lavoro');
       const rep = eventiGiorno.find(e => e.tipo === 'reperibilità');
       const ferie = eventiGiorno.find(e => e.tipo === 'ferie');
       const permesso = eventiGiorno.find(e => e.tipo === 'permesso');
       const malattia = eventiGiorno.find(e => e.tipo === 'malattia');
-
-      let stato = '';
-      let attivita = '';
-      let straordinari = '';
-
+      let stato = '', attivita = '', straordinari = '';
       if (lavorato) { stato = 'L'; attivita = lavorato.cantiere; straordinari = lavorato.straordinari || ''; }
       else if (rep) stato = 'RP';
       else if (ferie) stato = 'F';
       else if (permesso) stato = 'P';
       else if (malattia) stato = 'M';
-
       const speseGiorno = eventiGiorno.filter(e => e.tipo === 'spesa');
       const dataFmt = dayObj.toLocaleDateString('it-IT');
-
       if (speseGiorno.length === 0) {
         rows.push([g, dayName, stato, straordinari, attivita, '', '', '']);
       } else {
         speseGiorno.forEach((sp, idx) => {
-          if (idx === 0) {
-            rows.push([g, dayName, stato, straordinari, attivita, dataFmt, sp.cantiere, '€' + parseFloat(sp.importo).toFixed(2)]);
-          } else {
-            rows.push(['', '', '', '', '', dataFmt, sp.cantiere, '€' + parseFloat(sp.importo).toFixed(2)]);
-          }
+          if (idx === 0) rows.push([g, dayName, stato, straordinari, attivita, dataFmt, sp.cantiere, '€' + parseFloat(sp.importo).toFixed(2)]);
+          else rows.push(['', '', '', '', '', dataFmt, sp.cantiere, '€' + parseFloat(sp.importo).toFixed(2)]);
         });
       }
     }
 
-    // Totale spese
     const speseDelMese = log.filter(l => l.tipo === 'spesa' && l.dataISO && l.dataISO.startsWith(prefisso));
     const totale = speseDelMese.reduce((s, sp) => s + parseFloat(sp.importo || 0), 0);
     rows.push([{ content: 'TOTALE', colSpan: 7, styles: { halign: 'right', fontStyle: 'bold' } }, '€' + totale.toFixed(2)]);
 
     doc.autoTable({
       startY: 25,
-      head: [
-        [
-          { content: 'GIORNO', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-          { content: 'GIORNO\nSETTIMANA', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-          { content: 'L=LAVORATO\nF=FERIE\nP=PERMESSI\nRP=REPERIBILITÀ\nM=MALATTIA', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-          { content: 'STRAORDINARI', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-          { content: 'ATTIVITÀ SVOLTA', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-          { content: 'RIMBORSO SPESE', colSpan: 3, styles: { halign: 'center' } }
-        ],
-        [
-          { content: 'DATA', styles: { halign: 'center' } },
-          { content: 'DESCRIZIONE', styles: { halign: 'center' } },
-          { content: 'IMPORTO', styles: { halign: 'center' } }
-        ]
-      ],
+      head: [[
+        { content: 'GIORNO', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: 'GIORNO\nSETTIMANA', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: 'L=LAVORATO\nF=FERIE\nP=PERMESSI\nRP=REPERIBILITÀ\nM=MALATTIA', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: 'STRAORDINARI', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: 'ATTIVITÀ SVOLTA', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: 'RIMBORSO SPESE', colSpan: 3, styles: { halign: 'center' } }
+      ],[
+        { content: 'DATA', styles: { halign: 'center' } },
+        { content: 'DESCRIZIONE', styles: { halign: 'center' } },
+        { content: 'IMPORTO', styles: { halign: 'center' } }
+      ]],
       body: rows,
-      styles: {
-        fontSize: 7,
-        cellPadding: 1.5,
-        lineColor: [0, 0, 0],
-        lineWidth: 0.2,
-        valign: 'middle'
-      },
-      headStyles: {
-        fillColor: [255, 255, 255],
-        textColor: [0, 0, 0],
-        fontStyle: 'bold',
-        lineColor: [0, 0, 0],
-        lineWidth: 0.2,
-        fontSize: 6.5
-      },
+      styles: { fontSize: 7, cellPadding: 1.5, lineColor: [0,0,0], lineWidth: 0.2, valign: 'middle' },
+      headStyles: { fillColor: [255,255,255], textColor: [0,0,0], fontStyle: 'bold', lineColor: [0,0,0], lineWidth: 0.2, fontSize: 6.5 },
       columnStyles: {
         0: { halign: 'center', cellWidth: 14 },
         1: { halign: 'center', cellWidth: 16 },
@@ -447,7 +415,6 @@
       },
       theme: 'grid',
       didParseCell: function(data) {
-        // Evidenzia sabato e domenica
         if (data.section === 'body' && data.column.index === 1) {
           if (data.cell.raw === 'SAB' || data.cell.raw === 'DOM') {
             data.cell.styles.fillColor = [240, 240, 240];
@@ -461,10 +428,9 @@
 
   function esportaCSV() {
     if (log.length === 0) return alert('Nessun dato da esportare');
-    let csv = 'Data,Ora,Cantiere/Descrizione,Tecnico,Tipo,Straordinari,Importo\n';
-    const logOrdinato = [...log].sort((a, b) => (a.dataISO || '').localeCompare(b.dataISO || ''));
-    logOrdinato.forEach(r => {
-      csv += `${r.data},${r.ora},"${r.cantiere}","${r.tecnico || ''}",${r.tipo},${r.straordinari || ''},${r.importo || ''}\n`;
+    let csv = 'Data,Cantiere/Descrizione,Tecnico,Tipo,Straordinari,Importo\n';
+    [...log].sort((a,b) => (a.dataISO||'').localeCompare(b.dataISO||'')).forEach(r => {
+      csv += `${r.data},"${r.cantiere}","${r.tecnico||''}",${r.tipo},${r.straordinari||''},${r.importo||''}\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
