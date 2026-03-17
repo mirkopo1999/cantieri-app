@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cantieri App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background: #f2f2f7; color: #1c1c1e; }
+    header { background: #ff6b00; color: white; padding: 20px; text-align: center; }
+    header h1 { font-size: 22px; font-weight: 700; }
+    header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+    .container { padding: 16px; max-width: 500px; margin: auto; }
+    .card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #333; }
+    input, select { width: 100%; padding: 11px 14px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; margin-bottom: 10px; }
+    button { width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .btn-add { background: #ff6b00; color: white; }
+    .btn-entrata { background: #34c759; color: white; margin-bottom: 8px; }
+    .btn-uscita { background: #ff3b30; color: white; }
+    .btn-rep { background: #5856d6; color: white; }
+    .cantiere-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+    .cantiere-item:last-child { border-bottom: none; }
+    .cantiere-nome { font-size: 15px; font-weight: 500; }
+    .delete-btn { background: none; border: none; color: #ff3b30; font-size: 20px; cursor: pointer; width: auto; padding: 0 8px; }
+    .log-item { padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+    .log-item:last-child { border-bottom: none; }
+    .log-data { font-weight: 600; color: #333; }
+    .log-dettaglio { color: #666; margin-top: 2px; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-right: 6px; }
+    .badge-entrata { background: #d4f5dc; color: #1a7a2e; }
+    .badge-uscita { background: #ffd5d3; color: #a30000; }
+    .badge-rep { background: #e0dfff; color: #3634a3; }
+    .empty { text-align: center; color: #aaa; font-size: 14px; padding: 16px 0; }
+    .export-btn { background: #007aff; color: white; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Cantieri App</h1>
+  <p id="data-oggi"></p>
+</header>
+
+<div class="container">
+
+  <!-- AGGIUNGI CANTIERE -->
+  <div class="card">
+    <h2>📍 Aggiungi Cantiere</h2>
+    <input type="text" id="nome-cantiere" placeholder="Nome cantiere (es. Villa Rossi - Taranto)">
+    <button class="btn-add" onclick="aggiungiCantiere()">+ Aggiungi</button>
+  </div>
+
+  <!-- CANTIERI SALVATI -->
+  <div class="card">
+    <h2>📋 Cantieri Salvati</h2>
+    <div id="lista-cantieri"><p class="empty">Nessun cantiere aggiunto</p></div>
+  </div>
+
+  <!-- REGISTRA INGRESSO / USCITA -->
+  <div class="card">
+    <h2>🕐 Registra Movimento</h2>
+    <select id="cantiere-selezionato">
+      <option value="">— Seleziona cantiere —</option>
+    </select>
+    <button class="btn-entrata" onclick="registra('entrata')">▶ Registra Entrata</button>
+    <button class="btn-uscita" onclick="registra('uscita')">■ Registra Uscita</button>
+  </div>
+
+  <!-- REPERIBILITÀ -->
+  <div class="card">
+    <h2>📅 Reperibilità</h2>
+    <p style="font-size:14px;color:#666;margin-bottom:10px;">Premi il pulsante per segnare oggi come giornata di reperibilità</p>
+    <button class="btn-rep" onclick="registraReperibilita()">📞 Segna Reperibilità Oggi</button>
+  </div>
+
+  <!-- REPORT -->
+  <div class="card">
+    <h2>📊 Report</h2>
+    <div id="report"><p class="empty">Nessuna registrazione ancora</p></div>
+    <button class="export-btn" onclick="esportaCSV()">⬇ Esporta CSV</button>
+  </div>
+
+</div>
+
+<script>
+  // Data oggi
+  const oggi = new Date();
+  document.getElementById('data-oggi').textContent = oggi.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  // Carica dati
+  let cantieri = JSON.parse(localStorage.getItem('cantieri') || '[]');
+  let log = JSON.parse(localStorage.getItem('log') || '[]');
+
+  function salva() {
+    localStorage.setItem('cantieri', JSON.stringify(cantieri));
+    localStorage.setItem('log', JSON.stringify(log));
+  }
+
+  function aggiungiCantiere() {
+    const nome = document.getElementById('nome-cantiere').value.trim();
+    if (!nome) return alert('Inserisci il nome del cantiere');
+    if (cantieri.includes(nome)) return alert('Cantiere già presente');
+    cantieri.push(nome);
+    salva();
+    renderCantieri();
+    document.getElementById('nome-cantiere').value = '';
+  }
+
+  function eliminaCantiere(nome) {
+    if (!confirm('Eliminare "' + nome + '"?')) return;
+    cantieri = cantieri.filter(c => c !== nome);
+    salva();
+    renderCantieri();
+  }
+
+  function renderCantieri() {
+    const lista = document.getElementById('lista-cantieri');
+    const sel = document.getElementById('cantiere-selezionato');
+    if (cantieri.length === 0) {
+      lista.innerHTML = '<p class="empty">Nessun cantiere aggiunto</p>';
+      sel.innerHTML = '<option value="">— Seleziona cantiere —</option>';
+      return;
+    }
+    lista.innerHTML = cantieri.map(c => `
+      <div class="cantiere-item">
+        <span class="cantiere-nome">📍 ${c}</span>
+        <button class="delete-btn" onclick="eliminaCantiere('${c.replace(/'/g, "\\'")}')">✕</button>
+      </div>
+    `).join('');
+    sel.innerHTML = '<option value="">— Seleziona cantiere —</option>' +
+      cantieri.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
+  function registra(tipo) {
+    const cantiere = document.getElementById('cantiere-selezionato').value;
+    if (!cantiere) return alert('Seleziona un cantiere');
+    const ora = new Date();
+    log.unshift({
+      data: ora.toLocaleDateString('it-IT'),
+      ora: ora.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+      cantiere,
+      tipo
+    });
+    salva();
+    renderReport();
+    alert((tipo === 'entrata' ? '✅ Entrata' : '🔴 Uscita') + ' registrata alle ' + ora.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }));
+  }
+
+  function registraReperibilita() {
+    const ora = new Date();
+    const dataOggi = ora.toLocaleDateString('it-IT');
+    const giàPresente = log.find(l => l.data === dataOggi && l.tipo === 'reperibilità');
+    if (giàPresente) return alert('Reperibilità già segnata per oggi');
+    log.unshift({ data: dataOggi, ora: '', cantiere: '', tipo: 'reperibilità' });
+    salva();
+    renderReport();
+    alert('📅 Reperibilità segnata per oggi');
+  }
+
+  function renderReport() {
+    const div = document.getElementById('report');
+    if (log.length === 0) { div.innerHTML = '<p class="empty">Nessuna registrazione ancora</p>'; return; }
+    div.innerHTML = log.map(r => {
+      if (r.tipo === 'reperibilità') {
+        return `<div class="log-item">
+          <div class="log-data">📅 ${r.data}</div>
+          <div class="log-dettaglio"><span class="badge badge-rep">Reperibilità</span></div>
+        </div>`;
+      }
+      const badge = r.tipo === 'entrata' ? 'badge-entrata' : 'badge-uscita';
+      const label = r.tipo === 'entrata' ? 'Entrata' : 'Uscita';
+      return `<div class="log-item">
+        <div class="log-data">${r.data} — ${r.ora}</div>
+        <div class="log-dettaglio"><span class="badge ${badge}">${label}</span>${r.cantiere}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function esportaCSV() {
+    if (log.length === 0) return alert('Nessun dato da esportare');
+    let csv = 'Data,Ora,Cantiere,Tipo\n';
+    log.forEach(r => { csv += `${r.data},${r.ora},${r.cantiere},${r.tipo}\n`; });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'cantieri-report.csv'; a.click();
+  }
+
+  renderCantieri();
+  renderReport();
+</script>
+
+</body>
+</html>
