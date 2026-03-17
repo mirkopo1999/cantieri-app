@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cantieri App</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, sans-serif; background: #f2f2f7; color: #1c1c1e; }
@@ -19,8 +21,12 @@
     .btn-entrata { background: #34c759; color: white; }
     .btn-uscita { background: #ff3b30; color: white; }
     .btn-rep { background: #5856d6; color: white; }
+    .btn-ferie { background: #007aff; color: white; }
+    .btn-permesso { background: #ff9500; color: white; }
+    .btn-malattia { background: #8e8e93; color: white; }
     .btn-spese { background: #ff9500; color: white; }
     .btn-export { background: #007aff; color: white; }
+    .btn-pdf { background: #1c1c1e; color: white; }
     .cantiere-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
     .cantiere-item:last-child { border-bottom: none; }
     .cantiere-nome { font-size: 15px; font-weight: 500; }
@@ -33,12 +39,16 @@
     .badge-entrata { background: #d4f5dc; color: #1a7a2e; }
     .badge-uscita { background: #ffd5d3; color: #a30000; }
     .badge-rep { background: #e0dfff; color: #3634a3; }
+    .badge-ferie { background: #d0e8ff; color: #004080; }
+    .badge-permesso { background: #fff0d4; color: #a35c00; }
+    .badge-malattia { background: #e5e5ea; color: #3a3a3c; }
     .badge-spese { background: #fff0d4; color: #a35c00; }
     .empty { text-align: center; color: #aaa; font-size: 14px; padding: 16px 0; }
-    .label { font-size: 13px; color: #666; margin-bottom: 4px; margin-top: 4px; }
-    .row { display: flex; gap: 8px; }
-    .row input { margin-bottom: 10px; }
+    .label { font-size: 13px; color: #666; margin-bottom: 4px; margin-top: 2px; }
     .tecnico-attivo { font-size: 13px; color: #ff6b00; font-weight: 600; margin-bottom: 10px; }
+    .divider { border: none; border-top: 1px solid #f0f0f0; margin: 8px 0; }
+    .row2 { display: flex; gap: 8px; }
+    .row2 > * { flex: 1; }
   </style>
 </head>
 <body>
@@ -53,7 +63,7 @@
   <!-- TECNICO -->
   <div class="card">
     <h2>👷 Tecnico</h2>
-    <input type="text" id="nome-tecnico" placeholder="Il tuo nome (es. Mirko Polizio)">
+    <input type="text" id="nome-tecnico" placeholder="Nome e Cognome (es. Mirko Polizio)">
     <button class="btn-add" onclick="salvaTecnico()">Salva Nome</button>
     <div class="tecnico-attivo" id="tecnico-attivo"></div>
   </div>
@@ -74,16 +84,38 @@
   <!-- REGISTRA INGRESSO / USCITA -->
   <div class="card">
     <h2>🕐 Registra Movimento</h2>
-    <p class="label">Seleziona cantiere</p>
+    <p class="label">Cantiere</p>
     <select id="cantiere-selezionato">
       <option value="">— Seleziona cantiere —</option>
     </select>
-    <p class="label">Data (lascia oggi o scegli un giorno precedente)</p>
-    <input type="date" id="data-movimento">
-    <p class="label">Ora</p>
-    <input type="time" id="ora-movimento">
+    <div class="row2">
+      <div>
+        <p class="label">Data</p>
+        <input type="date" id="data-movimento">
+      </div>
+      <div>
+        <p class="label">Ora</p>
+        <input type="time" id="ora-movimento">
+      </div>
+    </div>
+    <p class="label">Straordinari (ore)</p>
+    <input type="number" id="straordinari" placeholder="es. 2" min="0" step="0.5">
     <button class="btn-entrata" onclick="registra('entrata')">▶ Registra Entrata</button>
     <button class="btn-uscita" onclick="registra('uscita')">■ Registra Uscita</button>
+  </div>
+
+  <!-- ASSENZE -->
+  <div class="card">
+    <h2>📋 Assenze / Permessi</h2>
+    <p class="label">Data</p>
+    <input type="date" id="data-assenza">
+    <button class="btn-ferie" onclick="registraAssenza('ferie')">🏖 Ferie</button>
+    <button class="btn-permesso" onclick="registraAssenza('permesso')">📝 Permesso</button>
+    <button class="btn-malattia" onclick="registraAssenza('malattia')">🤒 Malattia</button>
+    <hr class="divider">
+    <p class="label">Reperibilità</p>
+    <input type="date" id="data-reperibilita">
+    <button class="btn-rep" onclick="registraReperibilita()">📞 Segna Reperibilità</button>
   </div>
 
   <!-- RIMBORSI SPESE -->
@@ -98,25 +130,27 @@
     <button class="btn-spese" onclick="registraSpesa()">💶 Aggiungi Spesa</button>
   </div>
 
-  <!-- REPERIBILITÀ -->
-  <div class="card">
-    <h2>📅 Reperibilità</h2>
-    <p class="label">Data</p>
-    <input type="date" id="data-reperibilita">
-    <button class="btn-rep" onclick="registraReperibilita()">📞 Segna Reperibilità</button>
-  </div>
-
   <!-- REPORT -->
   <div class="card">
     <h2>📊 Report</h2>
     <div id="report"><p class="empty">Nessuna registrazione ancora</p></div>
+  </div>
+
+  <!-- ESPORTA -->
+  <div class="card">
+    <h2>📤 Esporta Foglio Presenze</h2>
+    <p class="label">Mese</p>
+    <div class="row2">
+      <select id="mese-export"></select>
+      <select id="anno-export"></select>
+    </div>
+    <button class="btn-pdf" onclick="esportaPDF()">📄 Esporta PDF Presenze</button>
     <button class="btn-export" onclick="esportaCSV()">⬇ Esporta CSV</button>
   </div>
 
 </div>
 
 <script>
-  // Data e ora di oggi come default
   const oggi = new Date();
   document.getElementById('data-oggi').textContent = oggi.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
@@ -127,14 +161,31 @@
   document.getElementById('ora-movimento').value = oraOggi;
   document.getElementById('data-spesa').value = dataOggiISO;
   document.getElementById('data-reperibilita').value = dataOggiISO;
+  document.getElementById('data-assenza').value = dataOggiISO;
 
-  // Carica dati
+  // Popola mese/anno export
+  const mesiNomi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const selMese = document.getElementById('mese-export');
+  const selAnno = document.getElementById('anno-export');
+  mesiNomi.forEach((m, i) => {
+    const opt = document.createElement('option');
+    opt.value = i + 1;
+    opt.textContent = m;
+    if (i === oggi.getMonth()) opt.selected = true;
+    selMese.appendChild(opt);
+  });
+  for (let a = oggi.getFullYear(); a >= oggi.getFullYear() - 2; a--) {
+    const opt = document.createElement('option');
+    opt.value = a; opt.textContent = a;
+    selAnno.appendChild(opt);
+  }
+
   let cantieri = JSON.parse(localStorage.getItem('cantieri') || '[]');
   let log = JSON.parse(localStorage.getItem('log') || '[]');
   let tecnico = localStorage.getItem('tecnico') || '';
 
   if (tecnico) {
-    document.getElementById('tecnico-attivo').textContent = '✅ Tecnico attivo: ' + tecnico;
+    document.getElementById('tecnico-attivo').textContent = '✅ Tecnico: ' + tecnico;
     document.getElementById('nome-tecnico').value = tecnico;
   }
 
@@ -148,7 +199,7 @@
     if (!nome) return alert('Inserisci il tuo nome');
     tecnico = nome;
     localStorage.setItem('tecnico', tecnico);
-    document.getElementById('tecnico-attivo').textContent = '✅ Tecnico attivo: ' + tecnico;
+    document.getElementById('tecnico-attivo').textContent = '✅ Tecnico: ' + tecnico;
     alert('Nome salvato!');
   }
 
@@ -180,9 +231,8 @@
     lista.innerHTML = cantieri.map(c => `
       <div class="cantiere-item">
         <span class="cantiere-nome">📍 ${c}</span>
-        <button class="delete-btn" onclick="eliminaCantiere('${c.replace(/'/g, "\\'")}')">✕</button>
-      </div>
-    `).join('');
+        <button class="delete-btn" onclick="eliminaCantiere('${c.replace(/'/g,"\\'")}')">✕</button>
+      </div>`).join('');
     sel.innerHTML = '<option value="">— Seleziona cantiere —</option>' +
       cantieri.map(c => `<option value="${c}">${c}</option>`).join('');
   }
@@ -190,45 +240,61 @@
   function registra(tipo) {
     const cantiere = document.getElementById('cantiere-selezionato').value;
     if (!cantiere) return alert('Seleziona un cantiere');
-    const data = document.getElementById('data-movimento').value;
+    const dataISO = document.getElementById('data-movimento').value;
     const ora = document.getElementById('ora-movimento').value;
-    if (!data || !ora) return alert('Inserisci data e ora');
-    const dataFormattata = new Date(data).toLocaleDateString('it-IT');
+    const straordinari = document.getElementById('straordinari').value;
+    if (!dataISO || !ora) return alert('Inserisci data e ora');
+    const data = new Date(dataISO + 'T12:00:00').toLocaleDateString('it-IT');
     const id = Date.now();
-    log.unshift({ id, data: dataFormattata, dataISO: data, ora, cantiere, tecnico, tipo });
+    log.unshift({ id, data, dataISO, ora, cantiere, tecnico, tipo, straordinari: straordinari || '' });
     salva();
     renderReport();
-    alert((tipo === 'entrata' ? '✅ Entrata' : '🔴 Uscita') + ' registrata — ' + dataFormattata + ' ore ' + ora);
+    document.getElementById('straordinari').value = '';
+    alert((tipo === 'entrata' ? '✅ Entrata' : '🔴 Uscita') + ' registrata — ' + data + ' ore ' + ora);
+  }
+
+  function registraAssenza(tipo) {
+    const dataISO = document.getElementById('data-assenza').value;
+    if (!dataISO) return alert('Seleziona una data');
+    const data = new Date(dataISO + 'T12:00:00').toLocaleDateString('it-IT');
+    const giàPresente = log.find(l => l.dataISO === dataISO && l.tipo === tipo);
+    if (giàPresente) return alert(tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' già segnata per ' + data);
+    const id = Date.now();
+    log.unshift({ id, data, dataISO, ora: '', cantiere: '', tecnico, tipo });
+    salva();
+    renderReport();
+    const etichette = { ferie: '🏖 Ferie', permesso: '📝 Permesso', malattia: '🤒 Malattia' };
+    alert(etichette[tipo] + ' segnata per ' + data);
+  }
+
+  function registraReperibilita() {
+    const dataISO = document.getElementById('data-reperibilita').value;
+    if (!dataISO) return alert('Seleziona una data');
+    const data = new Date(dataISO + 'T12:00:00').toLocaleDateString('it-IT');
+    const giàPresente = log.find(l => l.dataISO === dataISO && l.tipo === 'reperibilità');
+    if (giàPresente) return alert('Reperibilità già segnata per ' + data);
+    const id = Date.now();
+    log.unshift({ id, data, dataISO, ora: '', cantiere: '', tecnico, tipo: 'reperibilità' });
+    salva();
+    renderReport();
+    alert('📅 Reperibilità segnata per ' + data);
   }
 
   function registraSpesa() {
-    const data = document.getElementById('data-spesa').value;
+    const dataISO = document.getElementById('data-spesa').value;
     const desc = document.getElementById('desc-spesa').value.trim();
     const importo = parseFloat(document.getElementById('importo-spesa').value);
-    if (!data) return alert('Inserisci la data');
+    if (!dataISO) return alert('Inserisci la data');
     if (!desc) return alert('Inserisci una descrizione');
     if (isNaN(importo) || importo <= 0) return alert('Inserisci un importo valido');
-    const dataFormattata = new Date(data).toLocaleDateString('it-IT');
+    const data = new Date(dataISO + 'T12:00:00').toLocaleDateString('it-IT');
     const id = Date.now();
-    log.unshift({ id, data: dataFormattata, dataISO: data, ora: '', cantiere: desc, tecnico, tipo: 'spesa', importo });
+    log.unshift({ id, data, dataISO, ora: '', cantiere: desc, tecnico, tipo: 'spesa', importo });
     salva();
     renderReport();
     document.getElementById('desc-spesa').value = '';
     document.getElementById('importo-spesa').value = '';
-    alert('💶 Spesa di €' + importo.toFixed(2) + ' aggiunta per il ' + dataFormattata);
-  }
-
-  function registraReperibilita() {
-    const data = document.getElementById('data-reperibilita').value;
-    if (!data) return alert('Seleziona una data');
-    const dataFormattata = new Date(data).toLocaleDateString('it-IT');
-    const giàPresente = log.find(l => l.dataISO === data && l.tipo === 'reperibilità');
-    if (giàPresente) return alert('Reperibilità già segnata per ' + dataFormattata);
-    const id = Date.now();
-    log.unshift({ id, data: dataFormattata, dataISO: data, ora: '', cantiere: '', tecnico, tipo: 'reperibilità' });
-    salva();
-    renderReport();
-    alert('📅 Reperibilità segnata per ' + dataFormattata);
+    alert('💶 Spesa di €' + importo.toFixed(2) + ' aggiunta per ' + data);
   }
 
   function eliminaEvento(id) {
@@ -241,35 +307,164 @@
   function renderReport() {
     const div = document.getElementById('report');
     if (log.length === 0) { div.innerHTML = '<p class="empty">Nessuna registrazione ancora</p>'; return; }
-    // Ordina per data decrescente
-    const logOrdinato = [...log].sort((a, b) => new Date(b.dataISO) - new Date(a.dataISO));
+    const logOrdinato = [...log].sort((a, b) => (b.dataISO || '').localeCompare(a.dataISO || '') || (b.ora || '').localeCompare(a.ora || ''));
+    const badge = {
+      entrata: 'badge-entrata', uscita: 'badge-uscita', reperibilità: 'badge-rep',
+      ferie: 'badge-ferie', permesso: 'badge-permesso', malattia: 'badge-malattia', spesa: 'badge-spese'
+    };
+    const label = {
+      entrata: 'Entrata', uscita: 'Uscita', reperibilità: 'Reperibilità',
+      ferie: 'Ferie', permesso: 'Permesso', malattia: 'Malattia', spesa: 'Spesa'
+    };
     div.innerHTML = logOrdinato.map(r => {
-      let contenuto = '';
-      if (r.tipo === 'reperibilità') {
-        contenuto = `<span class="badge badge-rep">Reperibilità</span>${r.tecnico ? '— ' + r.tecnico : ''}`;
-      } else if (r.tipo === 'spesa') {
-        contenuto = `<span class="badge badge-spese">Spesa</span>${r.cantiere} — <strong>€${parseFloat(r.importo).toFixed(2)}</strong>`;
-      } else {
-        const badge = r.tipo === 'entrata' ? 'badge-entrata' : 'badge-uscita';
-        const label = r.tipo === 'entrata' ? 'Entrata' : 'Uscita';
-        contenuto = `<span class="badge ${badge}">${label}</span>${r.cantiere}${r.tecnico ? ' — ' + r.tecnico : ''}`;
-      }
+      let dettaglio = `<span class="badge ${badge[r.tipo] || ''}">${label[r.tipo] || r.tipo}</span>`;
+      if (r.tipo === 'spesa') dettaglio += `${r.cantiere} — <strong>€${parseFloat(r.importo).toFixed(2)}</strong>`;
+      else if (r.cantiere) dettaglio += r.cantiere;
+      if (r.tecnico) dettaglio += ` — ${r.tecnico}`;
       return `<div class="log-item">
         <div style="flex:1">
           <div class="log-data">${r.data}${r.ora ? ' — ' + r.ora : ''}</div>
-          <div class="log-dettaglio">${contenuto}</div>
+          <div class="log-dettaglio">${dettaglio}</div>
         </div>
         <button class="delete-btn" onclick="eliminaEvento(${r.id})">✕</button>
       </div>`;
     }).join('');
   }
 
+  function esportaPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4'); // landscape A4
+
+    const mese = parseInt(document.getElementById('mese-export').value);
+    const anno = parseInt(document.getElementById('anno-export').value);
+    const nomeMese = mesiNomi[mese - 1].toUpperCase();
+    const giorniNelMese = new Date(anno, mese, 0).getDate();
+    const giorniSett = ['DOM','LUN','MAR','MER','GIO','VEN','SAB'];
+
+    const parti = tecnico.trim().split(' ');
+    const cognome = parti.length > 1 ? parti.slice(1).join(' ').toUpperCase() : tecnico.toUpperCase();
+    const nome = parti.length > 0 ? parti[0].toUpperCase() : '';
+
+    // Header
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(nomeMese + ' ' + anno, 14, 12);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text('COGNOME: ' + cognome, 14, 20);
+    doc.text('NOME: ' + nome, 120, 20);
+    doc.text('MATR: ____________', 210, 20);
+
+    // Costruzione righe
+    const prefisso = `${anno}-${String(mese).padStart(2,'0')}`;
+    const rows = [];
+
+    for (let g = 1; g <= giorniNelMese; g++) {
+      const dataISO = `${prefisso}-${String(g).padStart(2,'0')}`;
+      const dayObj = new Date(dataISO + 'T12:00:00');
+      const dayName = giorniSett[dayObj.getDay()];
+      const eventiGiorno = log.filter(l => l.dataISO === dataISO);
+
+      const lavorato = eventiGiorno.find(e => e.tipo === 'entrata');
+      const rep = eventiGiorno.find(e => e.tipo === 'reperibilità');
+      const ferie = eventiGiorno.find(e => e.tipo === 'ferie');
+      const permesso = eventiGiorno.find(e => e.tipo === 'permesso');
+      const malattia = eventiGiorno.find(e => e.tipo === 'malattia');
+
+      let stato = '';
+      let attivita = '';
+      let straordinari = '';
+
+      if (lavorato) { stato = 'L'; attivita = lavorato.cantiere; straordinari = lavorato.straordinari || ''; }
+      else if (rep) stato = 'RP';
+      else if (ferie) stato = 'F';
+      else if (permesso) stato = 'P';
+      else if (malattia) stato = 'M';
+
+      const speseGiorno = eventiGiorno.filter(e => e.tipo === 'spesa');
+      const dataFmt = dayObj.toLocaleDateString('it-IT');
+
+      if (speseGiorno.length === 0) {
+        rows.push([g, dayName, stato, straordinari, attivita, '', '', '']);
+      } else {
+        speseGiorno.forEach((sp, idx) => {
+          if (idx === 0) {
+            rows.push([g, dayName, stato, straordinari, attivita, dataFmt, sp.cantiere, '€' + parseFloat(sp.importo).toFixed(2)]);
+          } else {
+            rows.push(['', '', '', '', '', dataFmt, sp.cantiere, '€' + parseFloat(sp.importo).toFixed(2)]);
+          }
+        });
+      }
+    }
+
+    // Totale spese
+    const speseDelMese = log.filter(l => l.tipo === 'spesa' && l.dataISO && l.dataISO.startsWith(prefisso));
+    const totale = speseDelMese.reduce((s, sp) => s + parseFloat(sp.importo || 0), 0);
+    rows.push([{ content: 'TOTALE', colSpan: 7, styles: { halign: 'right', fontStyle: 'bold' } }, '€' + totale.toFixed(2)]);
+
+    doc.autoTable({
+      startY: 25,
+      head: [
+        [
+          { content: 'GIORNO', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+          { content: 'GIORNO\nSETTIMANA', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+          { content: 'L=LAVORATO\nF=FERIE\nP=PERMESSI\nRP=REPERIBILITÀ\nM=MALATTIA', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+          { content: 'STRAORDINARI', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+          { content: 'ATTIVITÀ SVOLTA', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+          { content: 'RIMBORSO SPESE', colSpan: 3, styles: { halign: 'center' } }
+        ],
+        [
+          { content: 'DATA', styles: { halign: 'center' } },
+          { content: 'DESCRIZIONE', styles: { halign: 'center' } },
+          { content: 'IMPORTO', styles: { halign: 'center' } }
+        ]
+      ],
+      body: rows,
+      styles: {
+        fontSize: 7,
+        cellPadding: 1.5,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.2,
+        valign: 'middle'
+      },
+      headStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        lineColor: [0, 0, 0],
+        lineWidth: 0.2,
+        fontSize: 6.5
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 14 },
+        1: { halign: 'center', cellWidth: 16 },
+        2: { halign: 'center', cellWidth: 22 },
+        3: { halign: 'center', cellWidth: 20 },
+        4: { cellWidth: 80 },
+        5: { halign: 'center', cellWidth: 22 },
+        6: { cellWidth: 60 },
+        7: { halign: 'right', cellWidth: 22 }
+      },
+      theme: 'grid',
+      didParseCell: function(data) {
+        // Evidenzia sabato e domenica
+        if (data.section === 'body' && data.column.index === 1) {
+          if (data.cell.raw === 'SAB' || data.cell.raw === 'DOM') {
+            data.cell.styles.fillColor = [240, 240, 240];
+          }
+        }
+      }
+    });
+
+    doc.save(`presenze_${nomeMese}_${anno}.pdf`);
+  }
+
   function esportaCSV() {
     if (log.length === 0) return alert('Nessun dato da esportare');
-    let csv = 'Data,Ora,Cantiere/Descrizione,Tecnico,Tipo,Importo\n';
-    const logOrdinato = [...log].sort((a, b) => new Date(a.dataISO) - new Date(b.dataISO));
+    let csv = 'Data,Ora,Cantiere/Descrizione,Tecnico,Tipo,Straordinari,Importo\n';
+    const logOrdinato = [...log].sort((a, b) => (a.dataISO || '').localeCompare(b.dataISO || ''));
     logOrdinato.forEach(r => {
-      csv += `${r.data},${r.ora},"${r.cantiere}","${r.tecnico || ''}",${r.tipo},${r.importo || ''}\n`;
+      csv += `${r.data},${r.ora},"${r.cantiere}","${r.tecnico || ''}",${r.tipo},${r.straordinari || ''},${r.importo || ''}\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -280,6 +475,5 @@
   renderCantieri();
   renderReport();
 </script>
-
 </body>
 </html>
