@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Worklog</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Worklog">
+  <meta name="theme-color" content="#ff6b00">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <style>
@@ -160,6 +165,10 @@
   </div>
 
 </div>
+
+<footer style="text-align:center; padding: 20px 0 30px; font-size: 12px; color: #aaa;">
+  sviluppato da Mirko Polizio
+</footer>
 
 <script>
   const oggi = new Date();
@@ -339,27 +348,22 @@
     const cerca = (document.getElementById('cerca-report').value || '').toLowerCase().trim();
     const badge = { lavoro: 'badge-lavoro', reperibilità: 'badge-rep', ferie: 'badge-ferie', permesso: 'badge-permesso', malattia: 'badge-malattia', spesa: 'badge-spese' };
     const label = { lavoro: 'Lavorato', reperibilità: 'Reperibilità', ferie: 'Ferie', permesso: 'Permesso', malattia: 'Malattia', spesa: 'Spesa' };
-
     let logFiltrato = [...log].sort((a, b) => (b.dataISO || '').localeCompare(a.dataISO || ''));
-
     if (cerca) {
-      logFiltrato = logFiltrato.filter(r => {
-        return (r.data || '').toLowerCase().includes(cerca) ||
-               (r.cantiere || '').toLowerCase().includes(cerca) ||
-               (r.tipo || '').toLowerCase().includes(cerca) ||
-               (label[r.tipo] || '').toLowerCase().includes(cerca) ||
-               (r.tecnico || '').toLowerCase().includes(cerca) ||
-               (r.importo ? r.importo.toString() : '').includes(cerca);
-      });
+      logFiltrato = logFiltrato.filter(r =>
+        (r.data || '').toLowerCase().includes(cerca) ||
+        (r.cantiere || '').toLowerCase().includes(cerca) ||
+        (r.tipo || '').toLowerCase().includes(cerca) ||
+        (label[r.tipo] || '').toLowerCase().includes(cerca) ||
+        (r.tecnico || '').toLowerCase().includes(cerca) ||
+        (r.importo ? r.importo.toString() : '').includes(cerca)
+      );
     }
-
     document.getElementById('risultati-count').textContent = logFiltrato.length + ' risultat' + (logFiltrato.length === 1 ? 'o' : 'i');
-
     if (logFiltrato.length === 0) {
       div.innerHTML = '<p class="empty">' + (cerca ? 'Nessun risultato per "' + cerca + '"' : 'Nessuna registrazione ancora') + '</p>';
       return;
     }
-
     div.innerHTML = logFiltrato.map(r => {
       let dettaglio = `<span class="badge ${badge[r.tipo] || ''}">${label[r.tipo] || r.tipo}</span>`;
       if (r.tipo === 'spesa') dettaglio += `${r.cantiere} — <strong>€${parseFloat(r.importo).toFixed(2)}</strong>`;
@@ -386,7 +390,6 @@
     const parti = tecnico.trim().split(' ');
     const cognome = parti.length > 1 ? parti.slice(1).join(' ').toUpperCase() : tecnico.toUpperCase();
     const nome = parti.length > 0 ? parti[0].toUpperCase() : '';
-
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text(nomeMese + ' ' + anno, 14, 12);
@@ -395,10 +398,8 @@
     doc.text('COGNOME: ' + cognome, 14, 20);
     doc.text('NOME: ' + nome, 120, 20);
     doc.text('MATR: ____________', 210, 20);
-
     const prefisso = `${anno}-${String(mese).padStart(2,'0')}`;
     const rows = [];
-
     for (let g = 1; g <= giorniNelMese; g++) {
       const dataISO = `${prefisso}-${String(g).padStart(2,'0')}`;
       const dayObj = new Date(dataISO + 'T12:00:00');
@@ -426,11 +427,9 @@
         });
       }
     }
-
     const speseDelMese = log.filter(l => l.tipo === 'spesa' && l.dataISO && l.dataISO.startsWith(prefisso));
     const totale = speseDelMese.reduce((s, sp) => s + parseFloat(sp.importo || 0), 0);
     rows.push([{ content: 'TOTALE', colSpan: 7, styles: { halign: 'right', fontStyle: 'bold' } }, '€' + totale.toFixed(2)]);
-
     doc.autoTable({
       startY: 25,
       head: [[
@@ -467,7 +466,6 @@
         }
       }
     });
-
     doc.save(`presenze_${nomeMese}_${anno}.pdf`);
   }
 
@@ -483,11 +481,11 @@
     a.href = url; a.download = 'worklog-report.csv'; a.click();
   }
 
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/worklog/service-worker.js');
+  }
+
   renderCantieri();
 </script>
-<footer style="text-align:center; padding: 20px 0 30px; font-size: 12px; color: #aaa;">
-    sviluppato da Mirko Polizio
-  </footer>
-
 </body>
 </html>
