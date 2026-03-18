@@ -14,18 +14,18 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; background: #f2f2f7; color: #1c1c1e; min-height: 100vh; }
-
-    /* HEADER */
     .header { background: white; padding: 56px 20px 16px; border-bottom: 1px solid #e5e5ea; position: sticky; top: 0; z-index: 100; }
     .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
     .header-title { font-size: 34px; font-weight: 800; color: #1c1c1e; letter-spacing: -1px; }
     .header-avatar { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #ff6b00, #ff3d00); display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
     .header-date { font-size: 15px; color: #8e8e93; font-weight: 400; }
-
-    /* CONTAINER */
     .container { padding: 16px; max-width: 500px; margin: auto; padding-bottom: 40px; }
 
     /* STATS */
+    .stats-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .stats-header .section-title { margin: 0; }
+    .mese-selector { display: flex; align-items: center; gap: 6px; }
+    .mese-selector select { border: none; background: transparent; font-size: 13px; color: #ff6b00; font-weight: 600; outline: none; }
     .stats { display: flex; gap: 10px; margin-bottom: 24px; }
     .stat { flex: 1; background: white; border-radius: 16px; padding: 14px 10px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
     .stat-num { font-size: 26px; font-weight: 800; color: #1c1c1e; letter-spacing: -0.5px; }
@@ -34,10 +34,7 @@
     .stat-num.blue { color: #007aff; }
     .stat-label { font-size: 11px; color: #8e8e93; font-weight: 500; margin-top: 2px; }
 
-    /* SECTION TITLE */
     .section-title { font-size: 13px; font-weight: 700; color: #8e8e93; letter-spacing: 0.3px; text-transform: uppercase; margin: 0 4px 8px; }
-
-    /* CARD LIST */
     .card { background: white; border-radius: 16px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
     .card-row { display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid #f2f2f7; cursor: pointer; transition: background 0.15s; }
     .card-row:last-child { border-bottom: none; }
@@ -72,7 +69,10 @@
     .modal-btn { width: calc(100% - 32px); margin: 16px 16px 0; padding: 15px; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; }
     .modal-btn-primary { background: #ff6b00; color: white; }
     .modal-btn-secondary { background: white; color: #ff6b00; margin-top: 8px; }
-    .modal-btn-danger { background: #ff3b30; color: white; }
+
+    /* LUOGHI PANEL */
+    .luoghi-hidden { display: none; }
+    .luoghi-panel { padding: 0 0 8px; }
 
     /* REPORT */
     .report-hidden { display: none; }
@@ -95,19 +95,16 @@
     .log-delete { color: #ff3b30; font-size: 20px; background: none; border: none; cursor: pointer; padding: 0 4px; width: auto; margin: 0; }
     .count-label { font-size: 12px; color: #8e8e93; text-align: right; margin-bottom: 8px; }
     .empty-state { text-align: center; padding: 32px 20px; color: #8e8e93; font-size: 15px; }
-
-    /* TECNICO MODAL */
     .tecnico-info { font-size: 14px; color: #ff6b00; font-weight: 600; text-align: center; padding: 8px 0; }
-
-    /* DATE GLOBAL */
     .date-bar { background: white; border-radius: 12px; padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
     .date-bar-label { font-size: 15px; color: #1c1c1e; font-weight: 500; }
     .date-bar input { border: none; outline: none; font-size: 15px; color: #ff6b00; font-weight: 600; text-align: right; background: transparent; }
+    .luoghi-item { display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid #f2f2f7; }
+    .luoghi-item:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="header">
   <div class="header-top">
     <div class="header-title">Worklog</div>
@@ -119,9 +116,16 @@
 <div class="container">
 
   <!-- STATS -->
-  <div class="stats" id="stats-bar">
+  <div class="stats-header">
+    <div class="section-title">Riepilogo</div>
+    <div class="mese-selector">
+      <select id="stat-mese"></select>
+      <select id="stat-anno"></select>
+    </div>
+  </div>
+  <div class="stats">
     <div class="stat"><div class="stat-num green" id="stat-lavoro">0</div><div class="stat-label">Lavoro</div></div>
-    <div class="stat"><div class="stat-num orange" id="stat-rep">0</div><div class="stat-label">Reperibilità</div></div>
+    <div class="stat"><div class="stat-num orange" id="stat-straord">0h</div><div class="stat-label">Straordinari</div></div>
     <div class="stat"><div class="stat-num blue" id="stat-spese">€0</div><div class="stat-label">Spese</div></div>
   </div>
 
@@ -158,18 +162,27 @@
 
   <!-- LUOGHI -->
   <div class="section-title">Luoghi di lavoro</div>
-  <div class="card" id="lista-luoghi-card">
-    <div class="card-row" onclick="apriModal('modal-aggiungi-luogo')">
-      <div class="icon-wrap icon-orange">＋</div>
-      <div class="row-label">Aggiungi luogo</div>
-      <div class="chevron">›</div>
+  <div class="card">
+    <div class="card-row" onclick="toggleLuoghi()">
+      <div class="icon-wrap icon-orange">📍</div>
+      <div class="row-label" id="btn-luoghi-label">Gestisci luoghi</div>
+      <div class="chevron" id="btn-luoghi-chevron">›</div>
     </div>
-    <div id="lista-cantieri"></div>
+  </div>
+  <div id="luoghi-panel" class="luoghi-hidden">
+    <div class="card" style="margin-top:-16px">
+      <div class="card-row" onclick="apriModal('modal-aggiungi-luogo')">
+        <div class="icon-wrap icon-green" style="font-size:18px;font-weight:700">＋</div>
+        <div class="row-label">Aggiungi luogo</div>
+        <div class="chevron">›</div>
+      </div>
+      <div id="lista-cantieri"></div>
+    </div>
   </div>
 
   <!-- REPORT -->
-  <div class="section-title">Report</div>
-  <div class="card" style="overflow:visible">
+  <div class="section-title" id="report-section-title" style="margin-top:8px">Report</div>
+  <div class="card">
     <div class="card-row" onclick="toggleReport()">
       <div class="icon-wrap icon-dark">📊</div>
       <div class="row-label" id="btn-report-label">Mostra tutti i report</div>
@@ -206,9 +219,7 @@
   sviluppato da Mirko Polizio
 </footer>
 
-<!-- ===== MODALI ===== -->
-
-<!-- TECNICO -->
+<!-- MODALI -->
 <div class="modal-overlay" id="modal-tecnico">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -218,16 +229,13 @@
     </div>
     <div class="modal-body">
       <div class="field-label">Nome e Cognome</div>
-      <div class="field-card">
-        <input class="field-input" type="text" id="nome-tecnico" placeholder="es. Mario Rossi">
-      </div>
+      <div class="field-card"><input class="field-input" type="text" id="nome-tecnico" placeholder="es. Mario Rossi"></div>
       <div class="tecnico-info" id="tecnico-attivo"></div>
     </div>
     <button class="modal-btn modal-btn-primary" onclick="salvaTecnico()">Salva Nome</button>
   </div>
 </div>
 
-<!-- AGGIUNGI LUOGO -->
 <div class="modal-overlay" id="modal-aggiungi-luogo">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -237,15 +245,12 @@
     </div>
     <div class="modal-body">
       <div class="field-label">Nome luogo</div>
-      <div class="field-card">
-        <input class="field-input" type="text" id="nome-cantiere" placeholder="es. Sede centrale, Cantiere Roma...">
-      </div>
+      <div class="field-card"><input class="field-input" type="text" id="nome-cantiere" placeholder="es. Sede centrale, Cantiere Roma..."></div>
     </div>
     <button class="modal-btn modal-btn-primary" onclick="aggiungiCantiere()">+ Aggiungi</button>
   </div>
 </div>
 
-<!-- LAVORO -->
 <div class="modal-overlay" id="modal-lavoro">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -255,25 +260,16 @@
     </div>
     <div class="modal-body">
       <div class="field-label">Luogo di lavoro</div>
-      <div class="field-card">
-        <select class="field-select" id="cantiere-selezionato">
-          <option value="">— Seleziona luogo —</option>
-        </select>
-      </div>
+      <div class="field-card"><select class="field-select" id="cantiere-selezionato"><option value="">— Seleziona luogo —</option></select></div>
       <div class="field-label">Data</div>
-      <div class="field-card">
-        <input class="field-input" type="date" id="data-movimento" onchange="sincronizzaDate(this.value)">
-      </div>
+      <div class="field-card"><input class="field-input" type="date" id="data-movimento" onchange="sincronizzaDate(this.value)"></div>
       <div class="field-label">Straordinari (ore)</div>
-      <div class="field-card">
-        <input class="field-input" type="number" id="straordinari" placeholder="es. 2" min="0" step="0.5">
-      </div>
+      <div class="field-card"><input class="field-input" type="number" id="straordinari" placeholder="es. 2" min="0" step="0.5"></div>
     </div>
     <button class="modal-btn modal-btn-primary" onclick="registraLavoro()">✅ Registra Giornata</button>
   </div>
 </div>
 
-<!-- ASSENZE -->
 <div class="modal-overlay" id="modal-assenze">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -283,9 +279,7 @@
     </div>
     <div class="modal-body">
       <div class="field-label">Data</div>
-      <div class="field-card">
-        <input class="field-input" type="date" id="data-assenza" onchange="sincronizzaDate(this.value)">
-      </div>
+      <div class="field-card"><input class="field-input" type="date" id="data-assenza" onchange="sincronizzaDate(this.value)"></div>
     </div>
     <button class="modal-btn modal-btn-primary" onclick="registraAssenza('ferie')">🏖 Ferie</button>
     <button class="modal-btn modal-btn-secondary" onclick="registraAssenza('permesso')">📝 Permesso</button>
@@ -293,7 +287,6 @@
   </div>
 </div>
 
-<!-- REPERIBILITÀ -->
 <div class="modal-overlay" id="modal-rep">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -303,15 +296,12 @@
     </div>
     <div class="modal-body">
       <div class="field-label">Data</div>
-      <div class="field-card">
-        <input class="field-input" type="date" id="data-reperibilita" onchange="sincronizzaDate(this.value)">
-      </div>
+      <div class="field-card"><input class="field-input" type="date" id="data-reperibilita" onchange="sincronizzaDate(this.value)"></div>
     </div>
     <button class="modal-btn modal-btn-primary" onclick="registraReperibilita()">📞 Segna Reperibilità</button>
   </div>
 </div>
 
-<!-- SPESA -->
 <div class="modal-overlay" id="modal-spesa">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -321,23 +311,16 @@
     </div>
     <div class="modal-body">
       <div class="field-label">Data</div>
-      <div class="field-card">
-        <input class="field-input" type="date" id="data-spesa" onchange="sincronizzaDate(this.value)">
-      </div>
+      <div class="field-card"><input class="field-input" type="date" id="data-spesa" onchange="sincronizzaDate(this.value)"></div>
       <div class="field-label">Descrizione</div>
-      <div class="field-card">
-        <input class="field-input" type="text" id="desc-spesa" placeholder="es. Carburante, Autostrada...">
-      </div>
+      <div class="field-card"><input class="field-input" type="text" id="desc-spesa" placeholder="es. Carburante, Autostrada..."></div>
       <div class="field-label">Importo (€)</div>
-      <div class="field-card">
-        <input class="field-input" type="number" id="importo-spesa" placeholder="es. 25.50" step="0.01" min="0">
-      </div>
+      <div class="field-card"><input class="field-input" type="number" id="importo-spesa" placeholder="es. 25.50" step="0.01" min="0"></div>
     </div>
     <button class="modal-btn modal-btn-primary" onclick="registraSpesa()">💶 Aggiungi Spesa</button>
   </div>
 </div>
 
-<!-- EXPORT -->
 <div class="modal-overlay" id="modal-export">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -347,13 +330,9 @@
     </div>
     <div class="modal-body">
       <div class="field-label">Mese</div>
-      <div class="field-card">
-        <select class="field-select" id="mese-export"></select>
-      </div>
+      <div class="field-card"><select class="field-select" id="mese-export"></select></div>
       <div class="field-label">Anno</div>
-      <div class="field-card">
-        <select class="field-select" id="anno-export"></select>
-      </div>
+      <div class="field-card"><select class="field-select" id="anno-export"></select></div>
     </div>
     <button class="modal-btn modal-btn-primary" onclick="esportaPDF()">📄 Genera PDF</button>
   </div>
@@ -362,7 +341,6 @@
 <script>
   const oggi = new Date();
   document.getElementById('data-oggi').textContent = oggi.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-
   const dataOggiISO = oggi.toISOString().split('T')[0];
   ['data-globale','data-movimento','data-assenza','data-reperibilita','data-spesa'].forEach(id => {
     const el = document.getElementById(id);
@@ -376,19 +354,32 @@
     });
   }
 
-  function apriModal(id) {
-    document.getElementById(id).classList.add('open');
-  }
-  function chiudiModal(id) {
-    document.getElementById(id).classList.remove('open');
-  }
+  function apriModal(id) { document.getElementById(id).classList.add('open'); }
+  function chiudiModal(id) { document.getElementById(id).classList.remove('open'); }
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', e => {
-      if (e.target === overlay) overlay.classList.remove('open');
-    });
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
   });
 
   const mesiNomi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+  // Selettori stat
+  const statMese = document.getElementById('stat-mese');
+  const statAnno = document.getElementById('stat-anno');
+  mesiNomi.forEach((m, i) => {
+    const opt = document.createElement('option');
+    opt.value = i + 1; opt.textContent = m;
+    if (i === oggi.getMonth()) opt.selected = true;
+    statMese.appendChild(opt);
+  });
+  for (let a = oggi.getFullYear(); a >= oggi.getFullYear() - 2; a--) {
+    const opt = document.createElement('option');
+    opt.value = a; opt.textContent = a;
+    statAnno.appendChild(opt);
+  }
+  statMese.addEventListener('change', aggiornaStats);
+  statAnno.addEventListener('change', aggiornaStats);
+
+  // Selettori export
   const selMese = document.getElementById('mese-export');
   const selAnno = document.getElementById('anno-export');
   mesiNomi.forEach((m, i) => {
@@ -421,14 +412,16 @@
   }
 
   function aggiornaStats() {
-    const mese = oggi.getMonth() + 1;
-    const anno = oggi.getFullYear();
+    const mese = parseInt(statMese.value);
+    const anno = parseInt(statAnno.value);
     const prefisso = `${anno}-${String(mese).padStart(2,'0')}`;
     const lavoro = log.filter(l => l.tipo === 'lavoro' && l.dataISO && l.dataISO.startsWith(prefisso)).length;
-    const rep = log.filter(l => l.tipo === 'reperibilità' && l.dataISO && l.dataISO.startsWith(prefisso)).length;
-    const spese = log.filter(l => l.tipo === 'spesa' && l.dataISO && l.dataISO.startsWith(prefisso)).reduce((s, r) => s + parseFloat(r.importo || 0), 0);
+    const straord = log.filter(l => l.tipo === 'lavoro' && l.dataISO && l.dataISO.startsWith(prefisso))
+      .reduce((s, r) => s + parseFloat(r.straordinari || 0), 0);
+    const spese = log.filter(l => l.tipo === 'spesa' && l.dataISO && l.dataISO.startsWith(prefisso))
+      .reduce((s, r) => s + parseFloat(r.importo || 0), 0);
     document.getElementById('stat-lavoro').textContent = lavoro;
-    document.getElementById('stat-rep').textContent = rep;
+    document.getElementById('stat-straord').textContent = straord + 'h';
     document.getElementById('stat-spese').textContent = '€' + spese.toFixed(0);
   }
 
@@ -464,14 +457,35 @@
   function renderCantieri() {
     const lista = document.getElementById('lista-cantieri');
     const sel = document.getElementById('cantiere-selezionato');
-    lista.innerHTML = cantieri.map(c => `
-      <div class="card-row">
-        <div class="icon-wrap icon-orange" style="font-size:12px">📍</div>
-        <div class="row-label">${c}</div>
-        <button class="log-delete" onclick="eliminaCantiere('${c.replace(/'/g,"\\'")}')">✕</button>
-      </div>`).join('');
+    if (cantieri.length === 0) {
+      lista.innerHTML = '<div style="padding:12px 16px; color:#8e8e93; font-size:14px;">Nessun luogo aggiunto</div>';
+    } else {
+      lista.innerHTML = cantieri.map(c => `
+        <div class="luoghi-item">
+          <div class="icon-wrap icon-orange" style="font-size:12px;margin-right:14px">📍</div>
+          <div class="row-label">${c}</div>
+          <button class="log-delete" onclick="eliminaCantiere('${c.replace(/'/g,"\\'")}')">✕</button>
+        </div>`).join('');
+    }
     sel.innerHTML = '<option value="">— Seleziona luogo —</option>' +
       cantieri.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
+  let luoghiAperti = false;
+  function toggleLuoghi() {
+    luoghiAperti = !luoghiAperti;
+    const panel = document.getElementById('luoghi-panel');
+    const label = document.getElementById('btn-luoghi-label');
+    const chevron = document.getElementById('btn-luoghi-chevron');
+    if (luoghiAperti) {
+      panel.classList.remove('luoghi-hidden');
+      label.textContent = 'Nascondi luoghi';
+      chevron.textContent = '⌄';
+    } else {
+      panel.classList.add('luoghi-hidden');
+      label.textContent = 'Gestisci luoghi';
+      chevron.textContent = '›';
+    }
   }
 
   function registraLavoro() {
@@ -606,8 +620,8 @@
     setTimeout(() => {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF('l', 'mm', 'a4');
-      const mese = parseInt(document.getElementById('mese-export').value);
-      const anno = parseInt(document.getElementById('anno-export').value);
+      const mese = parseInt(selMese.value);
+      const anno = parseInt(selAnno.value);
       const nomeMese = mesiNomi[mese - 1].toUpperCase();
       const giorniNelMese = new Date(anno, mese, 0).getDate();
       const giorniSett = ['DOM','LUN','MAR','MER','GIO','VEN','SAB'];
