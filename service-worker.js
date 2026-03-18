@@ -1,8 +1,8 @@
 const CACHE_NAME = 'worklog-v1';
 const urlsToCache = [
-  '/worklog/',
-  '/worklog/index.html',
-  '/worklog/manifest.json'
+  '/Worklog/',
+  '/Worklog/index.html',
+  '/Worklog/manifest.json'
 ];
 
 self.addEventListener('install', event => {
