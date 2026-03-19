@@ -420,7 +420,7 @@
       .reduce((s, r) => s + parseFloat(r.straordinari || 0), 0);
     const spese = log.filter(l => l.tipo === 'spesa' && l.dataISO && l.dataISO.startsWith(prefisso))
       .reduce((s, r) => s + parseFloat(r.importo || 0), 0);
-    document.getElementById('stat-lavoro').textContent = lavoro;
+        document.getElementById('stat-lavoro').textContent = lavoro + 'g';
     document.getElementById('stat-straord').textContent = straord + 'h';
     document.getElementById('stat-spese').textContent = '€' + spese.toFixed(0);
   }
