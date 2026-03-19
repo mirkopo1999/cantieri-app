@@ -40,12 +40,10 @@
     .icon-green { background: #34c759; }
     .icon-blue { background: #007aff; }
     .icon-purple { background: #5856d6; }
-    .icon-red { background: #ff3b30; }
     .icon-gray { background: #8e8e93; }
     .icon-dark { background: #1c1c1e; }
     .icon-teal { background: #32ade6; }
     .row-label { font-size: 16px; color: #1c1c1e; font-weight: 500; flex: 1; }
-    .row-value { font-size: 14px; color: #8e8e93; margin-right: 6px; }
     .chevron { color: #c7c7cc; font-size: 16px; font-weight: 300; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: flex-end; }
     .modal-overlay.open { display: flex; }
@@ -64,7 +62,6 @@
     .modal-btn-primary { background: #ff6b00; color: white; }
     .modal-btn-secondary { background: white; color: #ff6b00; margin-top: 8px; }
     .modal-btn-green { background: #34c759; color: white; margin-top: 8px; }
-    .modal-btn-red { background: #ff3b30; color: white; margin-top: 8px; }
     .luoghi-hidden { display: none; }
     .report-hidden { display: none; }
     .search-wrap { background: white; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
@@ -107,7 +104,6 @@
 
 <div class="container">
 
-  <!-- STATS -->
   <div class="stats-header">
     <div class="section-title">Riepilogo</div>
     <div class="mese-selector">
@@ -121,13 +117,11 @@
     <div class="stat"><div class="stat-num blue" id="stat-spese">€0</div><div class="stat-label">Spese</div></div>
   </div>
 
-  <!-- DATA GLOBALE -->
   <div class="date-bar">
     <div class="date-bar-label">📅 Data selezionata</div>
     <input type="date" id="data-globale" onchange="sincronizzaDate(this.value)">
   </div>
 
-  <!-- REGISTRA -->
   <div class="section-title">Registra</div>
   <div class="card">
     <div class="card-row" onclick="apriModal('modal-lavoro')">
@@ -152,7 +146,6 @@
     </div>
   </div>
 
-  <!-- LUOGHI -->
   <div class="section-title">Luoghi di lavoro</div>
   <div class="card">
     <div class="card-row" onclick="toggleLuoghi()">
@@ -172,7 +165,6 @@
     </div>
   </div>
 
-  <!-- REPORT -->
   <div class="section-title" style="margin-top:8px">Report</div>
   <div class="card">
     <div class="card-row" onclick="toggleReport()">
@@ -190,7 +182,6 @@
     <div class="log-card" id="report"></div>
   </div>
 
-  <!-- ESPORTA -->
   <div class="section-title" style="margin-top:8px">Esporta</div>
   <div class="card">
     <div class="card-row" onclick="apriModal('modal-export')">
@@ -272,6 +263,8 @@
     <div class="modal-body">
       <div class="field-label">Data</div>
       <div class="field-card"><input class="field-input" type="date" id="data-assenza" onchange="sincronizzaDate(this.value)"></div>
+      <div class="field-label">Ore permesso (solo per Permesso)</div>
+      <div class="field-card"><input class="field-input" type="number" id="ore-permesso" placeholder="es. 2" min="0.5" step="0.5"></div>
     </div>
     <button class="modal-btn modal-btn-primary" onclick="registraAssenza('ferie')">🏖 Ferie</button>
     <button class="modal-btn modal-btn-secondary" onclick="registraAssenza('permesso')">📝 Permesso</button>
@@ -330,7 +323,6 @@
   </div>
 </div>
 
-<!-- BACKUP MODAL -->
 <div class="modal-overlay" id="modal-backup">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -340,7 +332,7 @@
     </div>
     <div class="modal-body">
       <div class="backup-info">
-        💾 <strong>Backup</strong> — scarica un file con tutti i tuoi dati (cantieri, report, spese). Salvalo su iCloud o mandatelo a te stesso su WhatsApp.<br><br>
+        💾 <strong>Backup</strong> — scarica un file con tutti i tuoi dati. Salvalo su iCloud o mandatelo a te stesso su WhatsApp.<br><br>
         🔄 <strong>Ripristino</strong> — seleziona un file di backup per ripristinare tutti i dati.
       </div>
     </div>
@@ -520,15 +512,30 @@
     const dataISO = document.getElementById('data-assenza').value;
     if (!dataISO) return alert('Seleziona una data');
     const data = new Date(dataISO + 'T12:00:00').toLocaleDateString('it-IT');
-    const giàPresente = log.find(l => l.dataISO === dataISO && l.tipo === tipo);
-    if (giàPresente) return alert(tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' già segnata per ' + data);
-    const id = Date.now();
-    log.unshift({ id, data, dataISO, cantiere: '', tecnico, tipo });
-    salva();
-    if (reportAperto) renderReport();
-    chiudiModal('modal-assenze');
-    const etichette = { ferie: '🏖 Ferie', permesso: '📝 Permesso', malattia: '🤒 Malattia' };
-    alert(etichette[tipo] + ' segnata per ' + data);
+
+    if (tipo === 'permesso') {
+      const oreInput = parseFloat(document.getElementById('ore-permesso').value);
+      if (isNaN(oreInput) || oreInput <= 0) return alert('Inserisci le ore di permesso');
+      const giàPresente = log.find(l => l.dataISO === dataISO && l.tipo === 'permesso');
+      if (giàPresente) return alert('Permesso già segnato per ' + data);
+      const id = Date.now();
+      log.unshift({ id, data, dataISO, cantiere: '', tecnico, tipo: 'permesso', orePermesso: oreInput });
+      salva();
+      if (reportAperto) renderReport();
+      document.getElementById('ore-permesso').value = '';
+      chiudiModal('modal-assenze');
+      alert('📝 Permesso di ' + oreInput + 'h segnato per ' + data);
+    } else {
+      const giàPresente = log.find(l => l.dataISO === dataISO && l.tipo === tipo);
+      if (giàPresente) return alert(tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' già segnata per ' + data);
+      const id = Date.now();
+      log.unshift({ id, data, dataISO, cantiere: '', tecnico, tipo });
+      salva();
+      if (reportAperto) renderReport();
+      chiudiModal('modal-assenze');
+      const etichette = { ferie: '🏖 Ferie', malattia: '🤒 Malattia' };
+      alert(etichette[tipo] + ' segnata per ' + data);
+    }
   }
 
   function registraReperibilita() {
@@ -570,15 +577,8 @@
     if (reportAperto) renderReport();
   }
 
-  // BACKUP
   function eseguiBackup() {
-    const backup = {
-      versione: '1.0',
-      data: new Date().toISOString(),
-      tecnico,
-      cantieri,
-      log
-    };
+    const backup = { versione: '1.0', data: new Date().toISOString(), tecnico, cantieri, log };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -587,7 +587,7 @@
     a.download = `worklog-backup-${dataOggi}.json`;
     a.click();
     chiudiModal('modal-backup');
-    alert('✅ Backup salvato! Conservalo su iCloud o mandatelo a te stesso su WhatsApp.');
+    alert('✅ Backup salvato!');
   }
 
   function ripristinaBackup(input) {
@@ -598,7 +598,7 @@
       try {
         const backup = JSON.parse(e.target.result);
         if (!backup.cantieri || !backup.log) return alert('File non valido');
-        if (!confirm('Ripristinare il backup del ' + new Date(backup.data).toLocaleDateString('it-IT') + '? I dati attuali verranno sostituiti.')) return;
+        if (!confirm('Ripristinare il backup del ' + new Date(backup.data).toLocaleDateString('it-IT') + '?')) return;
         cantieri = backup.cantieri || [];
         log = backup.log || [];
         tecnico = backup.tecnico || '';
@@ -617,7 +617,7 @@
         chiudiModal('modal-backup');
         alert('✅ Backup ripristinato con successo!');
       } catch(err) {
-        alert('Errore nel file di backup. Assicurati di selezionare il file corretto.');
+        alert('Errore nel file di backup.');
       }
     };
     reader.readAsText(file);
@@ -646,14 +646,14 @@
   function renderReport() {
     const div = document.getElementById('report');
     const cerca = (document.getElementById('cerca-report').value || '').toLowerCase().trim();
-    const label = { lavoro: 'Lavorato', reperibilità: 'Reperibilità', ferie: 'Ferie', permesso: 'Permesso', malattia: 'Malattia', spesa: 'Spesa' };
+    const labelMap = { lavoro: 'Lavorato', reperibilità: 'Reperibilità', ferie: 'Ferie', permesso: 'Permesso', malattia: 'Malattia', spesa: 'Spesa' };
     let logFiltrato = [...log].sort((a, b) => (b.dataISO || '').localeCompare(a.dataISO || ''));
     if (cerca) {
       logFiltrato = logFiltrato.filter(r =>
         (r.data || '').toLowerCase().includes(cerca) ||
         (r.cantiere || '').toLowerCase().includes(cerca) ||
         (r.tipo || '').toLowerCase().includes(cerca) ||
-        (label[r.tipo] || '').toLowerCase().includes(cerca) ||
+        (labelMap[r.tipo] || '').toLowerCase().includes(cerca) ||
         (r.tecnico || '').toLowerCase().includes(cerca) ||
         (r.importo ? r.importo.toString() : '').includes(cerca)
       );
@@ -664,10 +664,11 @@
       return;
     }
     div.innerHTML = logFiltrato.map(r => {
-      let titolo = label[r.tipo] || r.tipo;
+      let titolo = labelMap[r.tipo] || r.tipo;
       let sub = r.data;
       if (r.tipo === 'lavoro') { titolo = r.cantiere; sub = r.data + (r.straordinari ? ' · Straord. ' + r.straordinari + 'h' : ''); }
       if (r.tipo === 'spesa') { titolo = r.cantiere; sub = r.data + ' · €' + parseFloat(r.importo).toFixed(2); }
+      if (r.tipo === 'permesso') { titolo = 'Permesso ' + (r.orePermesso || '') + 'h'; sub = r.data; }
       return `<div class="log-item">
         <div class="log-dot ${r.tipo}"></div>
         <div class="log-info">
@@ -710,12 +711,28 @@
         const ferie = eventiGiorno.find(e => e.tipo === 'ferie');
         const permesso = eventiGiorno.find(e => e.tipo === 'permesso');
         const malattia = eventiGiorno.find(e => e.tipo === 'malattia');
-        let stato = '', attivita = '', straordinari = '';
-        if (lavorato) { stato = 'L'; attivita = lavorato.cantiere; straordinari = lavorato.straordinari || ''; }
-        else if (rep) stato = 'RP';
-        else if (ferie) stato = 'F';
-        else if (permesso) stato = 'P';
-        else if (malattia) stato = 'M';
+
+        // Costruisci stato combinato
+        let statoParti = [];
+        let attivitaParti = [];
+        let straordinari = '';
+
+        if (lavorato) {
+          statoParti.push('L');
+          attivitaParti.push(lavorato.cantiere);
+          straordinari = lavorato.straordinari || '';
+        }
+        if (permesso) {
+          statoParti.push('P');
+          attivitaParti.push('Permesso (' + (permesso.orePermesso || '') + 'h)');
+        }
+        if (rep && !lavorato) statoParti.push('RP');
+        if (ferie && !lavorato) statoParti.push('F');
+        if (malattia && !lavorato) statoParti.push('M');
+
+        const stato = statoParti.join('-');
+        const attivita = attivitaParti.join(' | ');
+
         const speseGiorno = eventiGiorno.filter(e => e.tipo === 'spesa');
         const dataFmt = dayObj.toLocaleDateString('it-IT');
         if (speseGiorno.length === 0) {
