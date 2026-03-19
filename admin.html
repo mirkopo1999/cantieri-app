@@ -18,6 +18,7 @@
     button { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
     .btn-primary { background: #ff6b00; color: white; }
     .btn-danger { background: #ff3b30; color: white; }
+    .btn-success { background: #34c759; color: white; }
     .result-box { background: #1c1c1e; border: 1px solid #3a3a3c; border-radius: 10px; padding: 14px; margin-top: 12px; font-family: monospace; font-size: 14px; color: #34c759; word-break: break-all; display: none; }
     .licenze-list { margin-top: 8px; }
     .licenza-item { background: #1c1c1e; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; border-left: 3px solid #34c759; }
@@ -37,15 +38,17 @@
     .badge-disattiva { background: #3a3a3c; color: #8e8e93; }
     .login-screen { max-width: 300px; margin: 100px auto; text-align: center; }
     .login-screen h2 { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
-    .secret-key { background: #2c2c2e; border: 1px solid #3a3a3c; border-radius: 10px; padding: 20px; margin-bottom: 20px; font-size: 13px; color: #8e8e93; line-height: 1.6; }
     .empty { text-align: center; color: #8e8e93; font-size: 14px; padding: 20px; }
+    .loading { text-align: center; color: #8e8e93; font-size: 14px; padding: 20px; }
+    .status-bar { background: #1c1c1e; border: 1px solid #3a3a3c; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; color: #8e8e93; display: none; }
+    .status-bar.ok { color: #34c759; border-color: #34c759; display: block; }
+    .status-bar.err { color: #ff3b30; border-color: #ff3b30; display: block; }
   </style>
 </head>
 <body>
 
 <div id="login-screen" class="login-screen">
   <h2>🔐 Worklog Admin</h2>
-  <div class="secret-key">Inserisci la tua password amministratore per accedere al pannello di controllo.</div>
   <input type="password" id="admin-password" placeholder="Password admin" onkeydown="if(event.key==='Enter') verificaPassword()">
   <button class="btn-primary" onclick="verificaPassword()">Accedi</button>
   <div id="login-error" style="color:#ff3b30; font-size:13px; margin-top:8px; display:none">Password errata</div>
@@ -58,6 +61,7 @@
   </div>
 
   <div class="container">
+    <div id="status-bar" class="status-bar"></div>
 
     <div class="card">
       <h2>➕ Genera Nuova Licenza</h2>
@@ -75,28 +79,66 @@
     </div>
 
     <div class="card">
-      <h2>📋 Licenze Attive</h2>
+      <h2>📋 Licenze <button class="btn-small btn-copia" style="width:auto;padding:4px 10px;float:right" onclick="caricaLicenze()">↻ Aggiorna</button></h2>
       <div class="licenze-list" id="licenze-list">
-        <div class="empty">Nessuna licenza generata</div>
+        <div class="loading">Caricamento...</div>
       </div>
     </div>
-
   </div>
 </div>
 
 <script>
-  // CAMBIA QUESTA PASSWORD CON UNA TUA PERSONALE
   const ADMIN_PASSWORD = 'worklog2026mirko';
   const SECRET_KEY = 'WL-SECRET-2026-MIRKO';
+  const BIN_ID = 'QUI_INSERISCI_IL_TUO_BIN_ID';
+  const MASTER_KEY = 'QUI_INSERISCI_LA_TUA_MASTER_KEY';
+  const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
   function verificaPassword() {
     const pwd = document.getElementById('admin-password').value;
     if (pwd === ADMIN_PASSWORD) {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('admin-panel').style.display = 'block';
-      renderLicenze();
+      caricaLicenze();
     } else {
       document.getElementById('login-error').style.display = 'block';
+    }
+  }
+
+  function mostraStatus(msg, tipo) {
+    const bar = document.getElementById('status-bar');
+    bar.textContent = msg;
+    bar.className = 'status-bar ' + tipo;
+    setTimeout(() => bar.className = 'status-bar', 3000);
+  }
+
+  async function leggiLicenze() {
+    const res = await fetch(BIN_URL + '/latest', {
+      headers: { 'X-Master-Key': MASTER_KEY }
+    });
+    const data = await res.json();
+    return data.record.licenze || [];
+  }
+
+  async function scriviLicenze(licenze) {
+    await fetch(BIN_URL, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': MASTER_KEY
+      },
+      body: JSON.stringify({ licenze })
+    });
+  }
+
+  async function caricaLicenze() {
+    const div = document.getElementById('licenze-list');
+    div.innerHTML = '<div class="loading">⏳ Caricamento...</div>';
+    try {
+      const licenze = await leggiLicenze();
+      renderLicenze(licenze);
+    } catch(e) {
+      div.innerHTML = '<div class="empty" style="color:#ff3b30">❌ Errore di connessione. Controlla la rete.</div>';
     }
   }
 
@@ -110,7 +152,7 @@
     return Math.abs(hash).toString(36).toUpperCase().padStart(8, '0');
   }
 
-  function generaLicenza() {
+  async function generaLicenza() {
     const nome = document.getElementById('nome-azienda').value.trim();
     const durata = parseInt(document.getElementById('durata-licenza').value);
     if (!nome) return alert('Inserisci il nome dell\'azienda');
@@ -118,51 +160,62 @@
     const scadenza = new Date();
     scadenza.setDate(scadenza.getDate() + durata);
     const scadenzaISO = scadenza.toISOString().split('T')[0];
-
     const payload = `${nome}|${scadenzaISO}|${SECRET_KEY}`;
     const firma = generaHash(payload);
     const codice = `WL-${firma}-${scadenzaISO.replace(/-/g,'')}`;
 
-    const licenze = JSON.parse(localStorage.getItem('licenze_admin') || '[]');
-    licenze.push({
-      nome,
-      codice,
-      scadenza: scadenzaISO,
-      creata: new Date().toISOString().split('T')[0],
-      attiva: true
-    });
-    localStorage.setItem('licenze_admin', JSON.stringify(licenze));
+    try {
+      const licenze = await leggiLicenze();
+      licenze.push({
+        nome,
+        codice,
+        scadenza: scadenzaISO,
+        creata: new Date().toISOString().split('T')[0],
+        attiva: true
+      });
+      await scriviLicenze(licenze);
 
-    const box = document.getElementById('result-box');
-    box.style.display = 'block';
-    box.textContent = codice;
-
-    document.getElementById('nome-azienda').value = '';
-    renderLicenze();
-    alert('✅ Licenza generata! Copia il codice e mandalo al cliente.');
+      const box = document.getElementById('result-box');
+      box.style.display = 'block';
+      box.textContent = codice;
+      document.getElementById('nome-azienda').value = '';
+      renderLicenze(licenze);
+      mostraStatus('✅ Licenza generata e salvata nel cloud!', 'ok');
+    } catch(e) {
+      mostraStatus('❌ Errore nel salvataggio. Controlla la connessione.', 'err');
+    }
   }
 
   function copiaLicenza(codice) {
-    navigator.clipboard.writeText(codice).then(() => alert('✅ Codice copiato!'));
+    navigator.clipboard.writeText(codice).then(() => mostraStatus('✅ Codice copiato!', 'ok'));
   }
 
-  function disattivaLicenza(idx) {
-    if (!confirm('Disattivare questa licenza?')) return;
-    const licenze = JSON.parse(localStorage.getItem('licenze_admin') || '[]');
-    licenze[idx].attiva = false;
-    localStorage.setItem('licenze_admin', JSON.stringify(licenze));
-    renderLicenze();
+  async function disattivaLicenza(idx) {
+    if (!confirm('Disattivare questa licenza? L\'app smetterà di funzionare al prossimo avvio.')) return;
+    try {
+      const licenze = await leggiLicenze();
+      licenze[idx].attiva = false;
+      await scriviLicenze(licenze);
+      renderLicenze(licenze);
+      mostraStatus('✅ Licenza disattivata!', 'ok');
+    } catch(e) {
+      mostraStatus('❌ Errore. Riprova.', 'err');
+    }
   }
 
-  function riattivaLicenza(idx) {
-    const licenze = JSON.parse(localStorage.getItem('licenze_admin') || '[]');
-    licenze[idx].attiva = true;
-    localStorage.setItem('licenze_admin', JSON.stringify(licenze));
-    renderLicenze();
+  async function riattivaLicenza(idx) {
+    try {
+      const licenze = await leggiLicenze();
+      licenze[idx].attiva = true;
+      await scriviLicenze(licenze);
+      renderLicenze(licenze);
+      mostraStatus('✅ Licenza riattivata!', 'ok');
+    } catch(e) {
+      mostraStatus('❌ Errore. Riprova.', 'err');
+    }
   }
 
-  function renderLicenze() {
-    const licenze = JSON.parse(localStorage.getItem('licenze_admin') || '[]');
+  function renderLicenze(licenze) {
     const div = document.getElementById('licenze-list');
     if (licenze.length === 0) { div.innerHTML = '<div class="empty">Nessuna licenza generata</div>'; return; }
     const oggi = new Date().toISOString().split('T')[0];
@@ -170,14 +223,17 @@
       const idxReale = licenze.length - 1 - i;
       const scaduta = l.scadenza < oggi;
       const classe = !l.attiva ? 'disattiva' : scaduta ? 'scaduta' : '';
-      const badge = !l.attiva ? '<span class="badge badge-disattiva">Disattiva</span>' : scaduta ? '<span class="badge badge-scaduta">Scaduta</span>' : '<span class="badge badge-attiva">Attiva</span>';
+      const badge = !l.attiva ? '<span class="badge badge-disattiva">Disattiva</span>' :
+        scaduta ? '<span class="badge badge-scaduta">Scaduta</span>' :
+        '<span class="badge badge-attiva">Attiva</span>';
       return `<div class="licenza-item ${classe}">
         <div class="licenza-nome">${l.nome} ${badge}</div>
         <div class="licenza-info">Creata: ${l.creata} · Scadenza: ${l.scadenza}</div>
         <div class="licenza-codice">${l.codice}</div>
         <div class="licenza-azioni">
           <button class="btn-small btn-copia" onclick="copiaLicenza('${l.codice}')">📋 Copia</button>
-          ${l.attiva ? `<button class="btn-small btn-disattiva" onclick="disattivaLicenza(${idxReale})">🚫 Disattiva</button>` : `<button class="btn-small btn-riattiva" onclick="riattivaLicenza(${idxReale})">✅ Riattiva</button>`}
+          ${l.attiva ? `<button class="btn-small btn-disattiva" onclick="disattivaLicenza(${idxReale})">🚫 Disattiva</button>` :
+          `<button class="btn-small btn-riattiva" onclick="riattivaLicenza(${idxReale})">✅ Riattiva</button>`}
         </div>
       </div>`;
     }).join('');
