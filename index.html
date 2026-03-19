@@ -56,6 +56,7 @@
     .icon-purple { background: #5856d6; }
     .icon-dark { background: #1c1c1e; }
     .icon-teal { background: #32ade6; }
+    .icon-red { background: #ff3b30; }
     .row-label { font-size: 16px; color: #1c1c1e; font-weight: 500; flex: 1; }
     .chevron { color: #c7c7cc; font-size: 16px; font-weight: 300; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: flex-end; }
@@ -75,6 +76,7 @@
     .modal-btn-primary { background: #ff6b00; color: white; }
     .modal-btn-secondary { background: white; color: #ff6b00; margin-top: 8px; }
     .modal-btn-green { background: #34c759; color: white; margin-top: 8px; }
+    .modal-btn-red { background: #ff3b30; color: white; margin-top: 8px; }
     .luoghi-hidden { display: none; }
     .report-hidden { display: none; }
     .search-wrap { background: white; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
@@ -112,11 +114,11 @@
     .guida-section-icon { font-size: 20px; }
     .guida-section-text { font-size: 14px; color: #3a3a3c; line-height: 1.6; }
     .licenza-badge { font-size: 11px; color: #8e8e93; text-align: center; padding: 2px 0 8px; }
+    .cancella-mese-btn { width: 100%; padding: 12px; border: none; border-radius: 12px; background: #ff3b30; color: white; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 12px; display: none; }
   </style>
 </head>
 <body>
 
-<!-- SCHERMATA LICENZA -->
 <div class="licenza-screen" id="licenza-screen">
   <div class="licenza-logo">⚡</div>
   <div class="licenza-title">Worklog</div>
@@ -130,7 +132,6 @@
   <div class="licenza-loading" id="licenza-loading">⏳ Verifica in corso...</div>
 </div>
 
-<!-- SCHERMATA LICENZA SCADUTA / DISATTIVATA -->
 <div class="licenza-scaduta-screen" id="licenza-scaduta-screen">
   <div class="licenza-scaduta-icon">🔒</div>
   <div class="licenza-scaduta-title">Accesso non disponibile</div>
@@ -152,8 +153,8 @@
   <div class="stats-header">
     <div class="section-title">Riepilogo</div>
     <div class="mese-selector">
-      <select id="stat-mese"></select>
-      <select id="stat-anno"></select>
+      <select id="stat-mese" onchange="onMeseChange()"></select>
+      <select id="stat-anno" onchange="onMeseChange()"></select>
     </div>
   </div>
   <div class="stats">
@@ -214,7 +215,7 @@
   <div class="card">
     <div class="card-row" onclick="toggleReport()">
       <div class="icon-wrap icon-dark">📊</div>
-      <div class="row-label" id="btn-report-label">Mostra tutti i report</div>
+      <div class="row-label" id="btn-report-label">Mostra report</div>
       <div class="chevron" id="btn-report-chevron">›</div>
     </div>
   </div>
@@ -224,6 +225,7 @@
       <input type="text" id="cerca-report" placeholder="Cerca luogo, tipo, importo..." oninput="renderReport()">
     </div>
     <div class="count-label" id="risultati-count"></div>
+    <button class="cancella-mese-btn" id="cancella-mese-btn" onclick="cancellaReportMese()">🗑 Cancella tutti i report di questo mese</button>
     <div class="log-card" id="report"></div>
   </div>
 
@@ -244,7 +246,7 @@
 </div>
 
 <footer style="text-align:center; padding: 10px 0 30px;">
-  <div class="version-label">v1.9</div>
+  <div class="version-label">v2.0</div>
   <div class="licenza-badge" id="licenza-badge"></div>
   <div class="footer-links">
     <button class="footer-link" onclick="apriModal('modal-guida')">come si usa</button>
@@ -433,7 +435,7 @@
       </div>
       <div class="guida-section">
         <div class="guida-section-title"><span class="guida-section-icon">📊</span> Report</div>
-        <div class="guida-section-text">Tocca per vedere tutte le registrazioni. Usa la barra di ricerca per filtrare per luogo, tipo o data.</div>
+        <div class="guida-section-text">Tocca per vedere le registrazioni del mese selezionato. Usa la barra di ricerca per filtrare. Puoi cancellare tutti i report del mese con il pulsante rosso.</div>
       </div>
       <div class="guida-section">
         <div class="guida-section-title"><span class="guida-section-icon">📄</span> Esporta PDF</div>
@@ -456,16 +458,14 @@
 
   async function validaLicenzaOnline(codice) {
     try {
-      const res = await fetch(BIN_URL + '/latest', {
-        headers: { 'X-Master-Key': MASTER_KEY }
-      });
+      const res = await fetch(BIN_URL + '/latest', { headers: { 'X-Master-Key': MASTER_KEY } });
       const data = await res.json();
       const licenze = data.record.licenze || [];
       const licenza = licenze.find(l => l.codice === codice);
       if (!licenza) return { valida: false };
-      if (!licenza.attiva) return { valida: false, disattivata: true };
+      if (!licenza.attiva) return { valida: false };
       const oggi = new Date().toISOString().split('T')[0];
-      if (licenza.scadenza < oggi) return { valida: false, scaduta: true };
+      if (licenza.scadenza < oggi) return { valida: false };
       return { valida: true, scadenza: licenza.scadenza };
     } catch(e) {
       return validaLicenzaOffline(codice);
@@ -482,9 +482,7 @@
       const oggi = new Date().toISOString().split('T')[0];
       if (scadenza < oggi) return { valida: false };
       return { valida: true, scadenza };
-    } catch(e) {
-      return { valida: false };
-    }
+    } catch(e) { return { valida: false }; }
   }
 
   async function verificaLicenza() {
@@ -545,8 +543,6 @@
       opt.value = a; opt.textContent = a;
       statAnno.appendChild(opt);
     }
-    statMese.addEventListener('change', aggiornaStats);
-    statAnno.addEventListener('change', aggiornaStats);
     window.statMese = statMese;
     window.statAnno = statAnno;
 
@@ -600,6 +596,17 @@
     }
   });
 
+  function getPrefissoMese() {
+    const mese = parseInt(window.statMese.value);
+    const anno = parseInt(window.statAnno.value);
+    return `${anno}-${String(mese).padStart(2,'0')}`;
+  }
+
+  function onMeseChange() {
+    aggiornaStats();
+    if (reportAperto) renderReport();
+  }
+
   function sincronizzaDate(val) {
     ['data-globale','data-movimento','data-assenza','data-reperibilita','data-spesa'].forEach(id => {
       const el = document.getElementById(id);
@@ -622,9 +629,7 @@
   }
 
   function aggiornaStats() {
-    const mese = parseInt(window.statMese.value);
-    const anno = parseInt(window.statAnno.value);
-    const prefisso = `${anno}-${String(mese).padStart(2,'0')}`;
+    const prefisso = getPrefissoMese();
     const lavoro = window.log.filter(l => l.tipo === 'lavoro' && l.dataISO && l.dataISO.startsWith(prefisso)).length;
     const straord = window.log.filter(l => l.tipo === 'lavoro' && l.dataISO && l.dataISO.startsWith(prefisso))
       .reduce((s, r) => s + parseFloat(r.straordinari || 0), 0);
@@ -784,6 +789,20 @@
     if (reportAperto) renderReport();
   }
 
+  function cancellaReportMese() {
+    const prefisso = getPrefissoMese();
+    const mese = parseInt(window.statMese.value);
+    const anno = parseInt(window.statAnno.value);
+    const nomeMese = window.mesiNomi[mese - 1];
+    const count = window.log.filter(l => l.dataISO && l.dataISO.startsWith(prefisso)).length;
+    if (count === 0) return alert('Nessun report da cancellare per questo mese.');
+    if (!confirm(`Cancellare tutti i ${count} report di ${nomeMese} ${anno}? Questa azione non è reversibile.`)) return;
+    window.log = window.log.filter(l => !l.dataISO || !l.dataISO.startsWith(prefisso));
+    salva();
+    renderReport();
+    alert(`✅ Tutti i report di ${nomeMese} ${anno} sono stati cancellati.`);
+  }
+
   function eseguiBackup() {
     const backup = { versione: '1.0', data: new Date().toISOString(), tecnico: window.tecnico, cantieri: window.cantieri, log: window.log };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -823,9 +842,7 @@
         if (reportAperto) renderReport();
         chiudiModal('modal-backup');
         alert('✅ Backup ripristinato con successo!');
-      } catch(err) {
-        alert('Errore nel file di backup.');
-      }
+      } catch(err) { alert('Errore nel file di backup.'); }
     };
     reader.readAsText(file);
     input.value = '';
@@ -839,13 +856,15 @@
     const chevron = document.getElementById('btn-report-chevron');
     if (reportAperto) {
       panel.classList.remove('report-hidden');
-      label.textContent = 'Nascondi report';
+      const mese = parseInt(window.statMese.value);
+      const anno = parseInt(window.statAnno.value);
+      label.textContent = `Nascondi report — ${window.mesiNomi[mese-1]} ${anno}`;
       chevron.textContent = '⌄';
       renderReport();
       document.getElementById('cerca-report').focus();
     } else {
       panel.classList.add('report-hidden');
-      label.textContent = 'Mostra tutti i report';
+      label.textContent = 'Mostra report';
       chevron.textContent = '›';
     }
   }
@@ -853,8 +872,13 @@
   function renderReport() {
     const div = document.getElementById('report');
     const cerca = (document.getElementById('cerca-report').value || '').toLowerCase().trim();
+    const prefisso = getPrefissoMese();
     const labelMap = { lavoro: 'Lavorato', reperibilità: 'Reperibilità', ferie: 'Ferie', permesso: 'Permesso', malattia: 'Malattia', spesa: 'Spesa' };
-    let logFiltrato = [...window.log].sort((a, b) => (b.dataISO || '').localeCompare(a.dataISO || ''));
+
+    let logFiltrato = [...window.log]
+      .filter(r => r.dataISO && r.dataISO.startsWith(prefisso))
+      .sort((a, b) => (b.dataISO || '').localeCompare(a.dataISO || ''));
+
     if (cerca) {
       logFiltrato = logFiltrato.filter(r =>
         (r.data || '').toLowerCase().includes(cerca) ||
@@ -865,9 +889,13 @@
         (r.importo ? r.importo.toString() : '').includes(cerca)
       );
     }
+
     document.getElementById('risultati-count').textContent = logFiltrato.length + ' risultat' + (logFiltrato.length === 1 ? 'o' : 'i');
+    const btnCancella = document.getElementById('cancella-mese-btn');
+    btnCancella.style.display = logFiltrato.length > 0 ? 'block' : 'none';
+
     if (logFiltrato.length === 0) {
-      div.innerHTML = '<div class="empty-state">' + (cerca ? 'Nessun risultato per "' + cerca + '"' : 'Nessuna registrazione ancora') + '</div>';
+      div.innerHTML = '<div class="empty-state">' + (cerca ? 'Nessun risultato per "' + cerca + '"' : 'Nessuna registrazione per questo mese') + '</div>';
       return;
     }
     div.innerHTML = logFiltrato.map(r => {
@@ -918,9 +946,7 @@
         const ferie = eventiGiorno.find(e => e.tipo === 'ferie');
         const permesso = eventiGiorno.find(e => e.tipo === 'permesso');
         const malattia = eventiGiorno.find(e => e.tipo === 'malattia');
-        let statoParti = [];
-        let attivitaParti = [];
-        let straordinari = '';
+        let statoParti = [], attivitaParti = [], straordinari = '';
         if (lavorato) { statoParti.push('L'); attivitaParti.push(lavorato.cantiere); straordinari = lavorato.straordinari || ''; }
         if (permesso) { statoParti.push('P'); attivitaParti.push('Permesso (' + (permesso.orePermesso || '') + 'h)'); }
         if (rep && !lavorato) statoParti.push('RP');
