@@ -17,7 +17,6 @@
     input, select { width: 100%; padding: 12px 14px; border: 1px solid #3a3a3c; border-radius: 10px; font-size: 15px; margin-bottom: 12px; background: #1c1c1e; color: white; outline: none; }
     button { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
     .btn-primary { background: #ff6b00; color: white; }
-    .btn-danger { background: #ff3b30; color: white; }
     .btn-success { background: #34c759; color: white; }
     .result-box { background: #1c1c1e; border: 1px solid #3a3a3c; border-radius: 10px; padding: 14px; margin-top: 12px; font-family: monospace; font-size: 14px; color: #34c759; word-break: break-all; display: none; }
     .licenze-list { margin-top: 8px; }
@@ -27,11 +26,12 @@
     .licenza-nome { font-size: 15px; font-weight: 600; }
     .licenza-info { font-size: 12px; color: #8e8e93; margin-top: 4px; }
     .licenza-codice { font-size: 11px; color: #ff6b00; font-family: monospace; margin-top: 4px; word-break: break-all; }
-    .licenza-azioni { display: flex; gap: 8px; margin-top: 8px; }
-    .btn-small { flex: 1; padding: 8px; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .licenza-azioni { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .btn-small { flex: 1; min-width: 70px; padding: 8px; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
     .btn-copia { background: #3a3a3c; color: white; }
-    .btn-disattiva { background: #ff3b30; color: white; }
+    .btn-disattiva { background: #ff9500; color: white; }
     .btn-riattiva { background: #34c759; color: white; }
+    .btn-elimina { background: #ff3b30; color: white; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-left: 8px; }
     .badge-attiva { background: #1a4a1a; color: #34c759; }
     .badge-scaduta { background: #4a1a1a; color: #ff3b30; }
@@ -89,7 +89,6 @@
 
 <script>
   const ADMIN_PASSWORD = 'worklog2026mirko';
-  const SECRET_KEY = 'WL-SECRET-2026-MIRKO';
   const BIN_ID = '69bbe428b7ec241ddc81c800';
   const MASTER_KEY = '$2a$10$VJdIi0M/eR8XUzboKW9s8eIhyUgJ6vDoNb7pJFgo4oNXjmvp5qzg6';
   const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -113,9 +112,7 @@
   }
 
   async function leggiLicenze() {
-    const res = await fetch(BIN_URL + '/latest', {
-      headers: { 'X-Master-Key': MASTER_KEY }
-    });
+    const res = await fetch(BIN_URL + '/latest', { headers: { 'X-Master-Key': MASTER_KEY } });
     const data = await res.json();
     return data.record.licenze || [];
   }
@@ -123,10 +120,7 @@
   async function scriviLicenze(licenze) {
     await fetch(BIN_URL, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': MASTER_KEY
-      },
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
       body: JSON.stringify({ licenze })
     });
   }
@@ -138,7 +132,7 @@
       const licenze = await leggiLicenze();
       renderLicenze(licenze);
     } catch(e) {
-      div.innerHTML = '<div class="empty" style="color:#ff3b30">❌ Errore di connessione. Controlla la rete.</div>';
+      div.innerHTML = '<div class="empty" style="color:#ff3b30">❌ Errore di connessione.</div>';
     }
   }
 
@@ -156,33 +150,23 @@
     const nome = document.getElementById('nome-azienda').value.trim();
     const durata = parseInt(document.getElementById('durata-licenza').value);
     if (!nome) return alert('Inserisci il nome dell\'azienda');
-
     const scadenza = new Date();
     scadenza.setDate(scadenza.getDate() + durata);
     const scadenzaISO = scadenza.toISOString().split('T')[0];
-    const payload = `${nome}|${scadenzaISO}|${SECRET_KEY}`;
-    const firma = generaHash(payload);
+    const firma = generaHash(`${nome}|${scadenzaISO}|WL-SECRET-2026-MIRKO`);
     const codice = `WL-${firma}-${scadenzaISO.replace(/-/g,'')}`;
-
     try {
       const licenze = await leggiLicenze();
-      licenze.push({
-        nome,
-        codice,
-        scadenza: scadenzaISO,
-        creata: new Date().toISOString().split('T')[0],
-        attiva: true
-      });
+      licenze.push({ nome, codice, scadenza: scadenzaISO, creata: new Date().toISOString().split('T')[0], attiva: true });
       await scriviLicenze(licenze);
-
       const box = document.getElementById('result-box');
       box.style.display = 'block';
       box.textContent = codice;
       document.getElementById('nome-azienda').value = '';
       renderLicenze(licenze);
-      mostraStatus('✅ Licenza generata e salvata nel cloud!', 'ok');
+      mostraStatus('✅ Licenza generata e salvata!', 'ok');
     } catch(e) {
-      mostraStatus('❌ Errore nel salvataggio. Controlla la connessione.', 'err');
+      mostraStatus('❌ Errore nel salvataggio.', 'err');
     }
   }
 
@@ -191,16 +175,14 @@
   }
 
   async function disattivaLicenza(idx) {
-    if (!confirm('Disattivare questa licenza? L\'app smetterà di funzionare al prossimo avvio.')) return;
+    if (!confirm('Disattivare questa licenza?')) return;
     try {
       const licenze = await leggiLicenze();
       licenze[idx].attiva = false;
       await scriviLicenze(licenze);
       renderLicenze(licenze);
       mostraStatus('✅ Licenza disattivata!', 'ok');
-    } catch(e) {
-      mostraStatus('❌ Errore. Riprova.', 'err');
-    }
+    } catch(e) { mostraStatus('❌ Errore. Riprova.', 'err'); }
   }
 
   async function riattivaLicenza(idx) {
@@ -210,9 +192,19 @@
       await scriviLicenze(licenze);
       renderLicenze(licenze);
       mostraStatus('✅ Licenza riattivata!', 'ok');
-    } catch(e) {
-      mostraStatus('❌ Errore. Riprova.', 'err');
-    }
+    } catch(e) { mostraStatus('❌ Errore. Riprova.', 'err'); }
+  }
+
+  async function eliminaLicenza(idx) {
+    const licenze = await leggiLicenze();
+    const nome = licenze[idx].nome;
+    if (!confirm(`Eliminare definitivamente la licenza di "${nome}"? Se attiva verrà disattivata e rimossa.`)) return;
+    try {
+      licenze.splice(idx, 1);
+      await scriviLicenze(licenze);
+      renderLicenze(licenze);
+      mostraStatus('✅ Licenza eliminata!', 'ok');
+    } catch(e) { mostraStatus('❌ Errore. Riprova.', 'err'); }
   }
 
   function renderLicenze(licenze) {
@@ -232,8 +224,10 @@
         <div class="licenza-codice">${l.codice}</div>
         <div class="licenza-azioni">
           <button class="btn-small btn-copia" onclick="copiaLicenza('${l.codice}')">📋 Copia</button>
-          ${l.attiva ? `<button class="btn-small btn-disattiva" onclick="disattivaLicenza(${idxReale})">🚫 Disattiva</button>` :
-          `<button class="btn-small btn-riattiva" onclick="riattivaLicenza(${idxReale})">✅ Riattiva</button>`}
+          ${l.attiva && !scaduta ?
+            `<button class="btn-small btn-disattiva" onclick="disattivaLicenza(${idxReale})">🚫 Disattiva</button>` :
+            `<button class="btn-small btn-riattiva" onclick="riattivaLicenza(${idxReale})">✅ Riattiva</button>`}
+          <button class="btn-small btn-elimina" onclick="eliminaLicenza(${idxReale})">🗑 Elimina</button>
         </div>
       </div>`;
     }).join('');
