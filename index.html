@@ -14,11 +14,8 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; background: #f2f2f7; color: #1c1c1e; min-height: 100vh; }
-
-    /* BANNER AGGIORNAMENTO */
     .update-banner { display: none; background: linear-gradient(135deg, #ff6b00, #ff3d00); color: white; padding: 12px 16px; text-align: center; font-size: 14px; font-weight: 600; cursor: pointer; position: sticky; top: 0; z-index: 999; }
     .update-banner.visible { display: block; }
-
     .header { background: white; padding: 56px 20px 16px; border-bottom: 1px solid #e5e5ea; position: sticky; top: 0; z-index: 100; }
     .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
     .header-title { font-size: 34px; font-weight: 800; color: #1c1c1e; letter-spacing: -1px; }
@@ -96,11 +93,19 @@
     .luoghi-item:last-child { border-bottom: none; }
     .backup-info { font-size: 13px; color: #8e8e93; padding: 12px 16px; line-height: 1.5; }
     .version-label { font-size: 11px; color: #c7c7cc; text-align: center; padding: 4px 0; }
+    .footer-links { display: flex; justify-content: center; gap: 16px; padding: 4px 0; }
+    .footer-link { font-size: 12px; color: #c7c7cc; cursor: pointer; text-decoration: none; background: none; border: none; font-family: inherit; }
+    .footer-link:active { color: #ff6b00; }
+
+    /* GUIDA */
+    .guida-section { margin-bottom: 20px; }
+    .guida-section-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; color: #1c1c1e; margin-bottom: 6px; }
+    .guida-section-icon { font-size: 20px; }
+    .guida-section-text { font-size: 14px; color: #3a3a3c; line-height: 1.6; }
   </style>
 </head>
 <body>
 
-<!-- BANNER AGGIORNAMENTO -->
 <div class="update-banner" id="update-banner" onclick="apriAggiornamento()">
   ⚡ Aggiornamento disponibile — tocca per aggiornare
 </div>
@@ -210,8 +215,12 @@
 </div>
 
 <footer style="text-align:center; padding: 10px 0 30px;">
-  <div class="version-label">v1.5</div>
-  <div style="font-size: 12px; color: #c7c7cc;">sviluppato da Mirko Polizio</div>
+  <div class="version-label">v1.6</div>
+  <div class="footer-links">
+    <button class="footer-link" onclick="apriModal('modal-guida')">come si usa</button>
+    <span style="color:#e5e5ea; font-size:12px;">·</span>
+    <span style="font-size:12px; color:#c7c7cc;">sviluppato da Mirko Polizio</span>
+  </div>
 </footer>
 
 <!-- MODALI -->
@@ -354,12 +363,75 @@
   </div>
 </div>
 
+<!-- GUIDA -->
+<div class="modal-overlay" id="modal-guida">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">📖 Come si usa Worklog</div>
+      <button class="modal-close" onclick="chiudiGuida()">Chiudi</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="guida-section">
+        <div class="guida-section-title"><span class="guida-section-icon">👷</span> Tecnico</div>
+        <div class="guida-section-text">Tocca l'icona con le tue iniziali in alto a destra per inserire il tuo nome e cognome. Viene salvato automaticamente e comparirà su tutti i PDF che genererai.</div>
+      </div>
+
+      <div class="guida-section">
+        <div class="guida-section-title"><span class="guida-section-icon">📅</span> Data selezionata</div>
+        <div class="guida-section-text">Cambia la data da qui — si aggiorna automaticamente in tutte le sezioni. Utile se dimentichi di registrare una giornata e vuoi farlo in un secondo momento.</div>
+      </div>
+
+      <div class="guida-section">
+        <div class="guida-section-title"><span class="guida-section-icon">🏗</span> Giornata lavorativa</div>
+        <div class="guida-section-text">Seleziona il luogo di lavoro, la data e gli eventuali straordinari. Premi "Registra Giornata" per salvare.</div>
+      </div>
+
+      <div class="guida-section">
+        <div class="guida-section-title"><span class="guida-section-icon">📋</span> Assenze / Permessi</div>
+        <div class="guida-section-text">Seleziona la data e premi il tipo di assenza — Ferie, Permesso o Malattia. Per il permesso inserisci anche le ore. Puoi registrare un permesso e una giornata lavorativa nello stesso giorno.</div>
+      </div>
+
+      <div class="guida-section">
+        <div class="guida-section-title"><span class="guida-section-icon">📞</span> Reperibilità</div>
+        <div class="guida-section-text">Seleziona la data e premi "Segna Reperibilità" per registrare una giornata di reperibilità.</div>
+      </div>
+
+      <div class="guida-section">
+        <div class="guida-section-title"><span class="guida-section-icon">💶</span> Rimborso spese</div>
+        <div class="guida-section-text">Inserisci data, descrizione e importo. Le spese compaiono automaticamente nel PDF mensile con il totale.</div>
+      </div>
+
+      <div class="guida-section">
+        <div class="guida-section-title"><span class="guida-section-icon">📍</span> Luoghi di lavoro</div>
+        <div class="guida-section-text">Aggiungi i luoghi dove lavori — compariranno nel menu a tendina quando registri una giornata.</div>
+      </div>
+
+      <div class="guida-section">
+        <div class="guida-section-title"><span class="guida-section-icon">📊</span> Report</div>
+        <div class="guida-section-text">Tocca per vedere tutte le registrazioni. Usa la barra di ricerca per filtrare per luogo, tipo o data.</div>
+      </div>
+
+      <div class="guida-section">
+        <div class="guida-section-title"><span class="guida-section-icon">📄</span> Esporta PDF</div>
+        <div class="guida-section-text">Seleziona mese e anno e genera il foglio presenze mensile da consegnare all'amministrazione.</div>
+      </div>
+
+      <div class="guida-section">
+        <div class="guida-section-title"><span class="guida-section-icon">💾</span> Backup & Ripristino</div>
+        <div class="guida-section-text">Scarica una copia dei tuoi dati prima di ogni aggiornamento dell'app. In caso di problemi puoi ripristinare tutto in pochi secondi.</div>
+      </div>
+
+    </div>
+    <button class="modal-btn modal-btn-primary" onclick="chiudiGuida()">Ho capito!</button>
+  </div>
+</div>
+
 <script>
-  // VERSIONE APP — aggiorna questo numero ad ogni modifica
-  const APP_VERSION = '1.5';
+  const APP_VERSION = '1.6';
   const VERSION_URL = 'https://mirkopo1999.github.io/Worklog/version.json';
 
-  // Controlla aggiornamenti
   async function controllaAggiornamenti() {
     try {
       const res = await fetch(VERSION_URL + '?t=' + Date.now());
@@ -372,6 +444,13 @@
 
   function apriAggiornamento() {
     window.open('https://mirkopo1999.github.io/Worklog', '_blank');
+  }
+
+  // GUIDA — mostra al primo avvio
+  function apriGuida() { apriModal('modal-guida'); }
+  function chiudiGuida() {
+    chiudiModal('modal-guida');
+    localStorage.setItem('guida_vista', '1');
   }
 
   const oggi = new Date();
@@ -806,6 +885,11 @@
   renderCantieri();
   aggiornaStats();
   controllaAggiornamenti();
+
+  // Mostra guida al primo avvio
+  if (!localStorage.getItem('guida_vista')) {
+    setTimeout(() => apriModal('modal-guida'), 800);
+  }
 </script>
 </body>
 </html>
