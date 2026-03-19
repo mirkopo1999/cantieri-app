@@ -14,9 +14,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; background: #f2f2f7; color: #1c1c1e; min-height: 100vh; }
-
-    /* LICENZA SCREEN */
-    .licenza-screen { position: fixed; inset: 0; background: #f2f2f7; z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
+    .licenza-screen { position: fixed; inset: 0; background: #f2f2f7; z-index: 999; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
     .licenza-logo { font-size: 48px; margin-bottom: 12px; }
     .licenza-title { font-size: 32px; font-weight: 800; color: #1c1c1e; letter-spacing: -1px; margin-bottom: 6px; }
     .licenza-sub { font-size: 14px; color: #8e8e93; margin-bottom: 40px; text-align: center; }
@@ -25,11 +23,11 @@
     .licenza-input { width: 100%; border: none; outline: none; font-size: 15px; color: #1c1c1e; font-family: monospace; letter-spacing: 1px; }
     .licenza-btn { width: 100%; max-width: 360px; padding: 15px; border: none; border-radius: 14px; background: #ff6b00; color: white; font-size: 16px; font-weight: 700; cursor: pointer; }
     .licenza-error { color: #ff3b30; font-size: 13px; text-align: center; margin-top: 12px; display: none; }
+    .licenza-loading { color: #8e8e93; font-size: 13px; text-align: center; margin-top: 12px; display: none; }
     .licenza-scaduta-screen { position: fixed; inset: 0; background: #f2f2f7; z-index: 999; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; }
     .licenza-scaduta-icon { font-size: 60px; margin-bottom: 16px; }
     .licenza-scaduta-title { font-size: 24px; font-weight: 800; color: #ff3b30; margin-bottom: 8px; }
     .licenza-scaduta-text { font-size: 14px; color: #8e8e93; line-height: 1.6; max-width: 300px; }
-
     .header { background: white; padding: 56px 20px 16px; border-bottom: 1px solid #e5e5ea; position: sticky; top: 0; z-index: 100; }
     .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
     .header-title { font-size: 34px; font-weight: 800; color: #1c1c1e; letter-spacing: -1px; }
@@ -56,7 +54,6 @@
     .icon-green { background: #34c759; }
     .icon-blue { background: #007aff; }
     .icon-purple { background: #5856d6; }
-    .icon-gray { background: #8e8e93; }
     .icon-dark { background: #1c1c1e; }
     .icon-teal { background: #32ade6; }
     .row-label { font-size: 16px; color: #1c1c1e; font-weight: 500; flex: 1; }
@@ -120,7 +117,7 @@
 <body>
 
 <!-- SCHERMATA LICENZA -->
-<div class="licenza-screen" id="licenza-screen" style="display:none">
+<div class="licenza-screen" id="licenza-screen">
   <div class="licenza-logo">⚡</div>
   <div class="licenza-title">Worklog</div>
   <div class="licenza-sub">Inserisci il codice licenza ricevuto<br>dall'amministratore</div>
@@ -130,13 +127,14 @@
   </div>
   <button class="licenza-btn" onclick="verificaLicenza()">Attiva Licenza</button>
   <div class="licenza-error" id="licenza-error">Codice non valido o scaduto. Contatta l'amministratore.</div>
+  <div class="licenza-loading" id="licenza-loading">⏳ Verifica in corso...</div>
 </div>
 
-<!-- SCHERMATA LICENZA SCADUTA -->
+<!-- SCHERMATA LICENZA SCADUTA / DISATTIVATA -->
 <div class="licenza-scaduta-screen" id="licenza-scaduta-screen">
   <div class="licenza-scaduta-icon">🔒</div>
-  <div class="licenza-scaduta-title">Licenza Scaduta</div>
-  <div class="licenza-scaduta-text">La tua licenza Worklog è scaduta.<br><br>Contatta il tuo amministratore per rinnovare l'accesso.</div>
+  <div class="licenza-scaduta-title">Accesso non disponibile</div>
+  <div class="licenza-scaduta-text">La tua licenza Worklog è scaduta o è stata disattivata.<br><br>Contatta il tuo amministratore per rinnovare l'accesso.</div>
 </div>
 
 <div id="app-content" style="display:none">
@@ -246,7 +244,7 @@
 </div>
 
 <footer style="text-align:center; padding: 10px 0 30px;">
-  <div class="version-label">v1.8</div>
+  <div class="version-label">v1.9</div>
   <div class="licenza-badge" id="licenza-badge"></div>
   <div class="footer-links">
     <button class="footer-link" onclick="apriModal('modal-guida')">come si usa</button>
@@ -255,7 +253,7 @@
   </div>
 </footer>
 
-</div><!-- fine app-content -->
+</div>
 
 <!-- MODALI -->
 <div class="modal-overlay" id="modal-tecnico">
@@ -451,48 +449,58 @@
 </div>
 
 <script>
-  // CHIAVE SEGRETA — deve essere identica a quella in admin.html
   const SECRET_KEY = 'WL-SECRET-2026-MIRKO';
+  const BIN_ID = '69bbe428b7ec241ddc81c800';
+  const MASTER_KEY = '$2a$10$VJdIi0M/eR8XUzboKW9s8eIhyUgJ6vDoNb7pJFgo4oNXjmvp5qzg6';
+  const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-  function generaHash(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
+  async function validaLicenzaOnline(codice) {
+    try {
+      const res = await fetch(BIN_URL + '/latest', {
+        headers: { 'X-Master-Key': MASTER_KEY }
+      });
+      const data = await res.json();
+      const licenze = data.record.licenze || [];
+      const licenza = licenze.find(l => l.codice === codice);
+      if (!licenza) return { valida: false };
+      if (!licenza.attiva) return { valida: false, disattivata: true };
+      const oggi = new Date().toISOString().split('T')[0];
+      if (licenza.scadenza < oggi) return { valida: false, scaduta: true };
+      return { valida: true, scadenza: licenza.scadenza };
+    } catch(e) {
+      return validaLicenzaOffline(codice);
     }
-    return Math.abs(hash).toString(36).toUpperCase().padStart(8, '0');
   }
 
-  function verificaLicenza() {
+  function validaLicenzaOffline(codice) {
+    try {
+      const parti = codice.split('-');
+      if (parti.length !== 3 || parti[0] !== 'WL') return { valida: false };
+      const dataStr = parti[2];
+      if (dataStr.length !== 8) return { valida: false };
+      const scadenza = `${dataStr.slice(0,4)}-${dataStr.slice(4,6)}-${dataStr.slice(6,8)}`;
+      const oggi = new Date().toISOString().split('T')[0];
+      if (scadenza < oggi) return { valida: false };
+      return { valida: true, scadenza };
+    } catch(e) {
+      return { valida: false };
+    }
+  }
+
+  async function verificaLicenza() {
     const codice = document.getElementById('licenza-input').value.trim().toUpperCase();
-    const risultato = validaLicenza(codice);
+    document.getElementById('licenza-error').style.display = 'none';
+    document.getElementById('licenza-loading').style.display = 'block';
+    document.querySelector('.licenza-btn').disabled = true;
+    const risultato = await validaLicenzaOnline(codice);
+    document.getElementById('licenza-loading').style.display = 'none';
+    document.querySelector('.licenza-btn').disabled = false;
     if (risultato.valida) {
       localStorage.setItem('licenza', codice);
       document.getElementById('licenza-screen').style.display = 'none';
       avviaApp(risultato.scadenza);
     } else {
       document.getElementById('licenza-error').style.display = 'block';
-    }
-  }
-
-  function validaLicenza(codice) {
-    try {
-      const parti = codice.split('-');
-      if (parti.length !== 3 || parti[0] !== 'WL') return { valida: false };
-      const firma = parti[1];
-      const dataStr = parti[2];
-      const scadenza = `${dataStr.slice(0,4)}-${dataStr.slice(4,6)}-${dataStr.slice(6,8)}`;
-      const oggi = new Date().toISOString().split('T')[0];
-      if (scadenza < oggi) return { valida: false, scaduta: true, scadenza };
-
-      // Verifica firma — prova diversi nomi azienda salvati
-      // La firma è valida se corrisponde a qualsiasi payload con quella scadenza
-      // Verifica semplificata: controlla formato e data
-      if (dataStr.length !== 8) return { valida: false };
-      return { valida: true, scadenza };
-    } catch(e) {
-      return { valida: false };
     }
   }
 
@@ -577,14 +585,14 @@
     }
   }
 
-  // Controlla licenza all'avvio
-  window.addEventListener('load', () => {
+  window.addEventListener('load', async () => {
     const licenzaSalvata = localStorage.getItem('licenza');
     if (licenzaSalvata) {
-      const risultato = validaLicenza(licenzaSalvata);
+      const risultato = await validaLicenzaOnline(licenzaSalvata);
       if (risultato.valida) {
         avviaApp(risultato.scadenza);
       } else {
+        localStorage.removeItem('licenza');
         document.getElementById('licenza-scaduta-screen').style.display = 'flex';
       }
     } else {
