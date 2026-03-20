@@ -4,9 +4,7 @@
   © 2026 Mirko Polizio. Tutti i diritti riservati.
   Qualsiasi copia, modifica o distribuzione non autorizzata
   è vietata ai sensi della legge sul diritto d'autore.
-  Contatto: mirkopo1999@gmail.com
 -->
-
 <html lang="it">
 <head>
   <meta charset="UTF-8">
@@ -64,7 +62,6 @@
     .icon-purple { background: #5856d6; }
     .icon-dark { background: #1c1c1e; }
     .icon-teal { background: #32ade6; }
-    .icon-red { background: #ff3b30; }
     .row-label { font-size: 16px; color: #1c1c1e; font-weight: 500; flex: 1; }
     .chevron { color: #c7c7cc; font-size: 16px; font-weight: 300; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: flex-end; }
@@ -84,7 +81,6 @@
     .modal-btn-primary { background: #ff6b00; color: white; }
     .modal-btn-secondary { background: white; color: #ff6b00; margin-top: 8px; }
     .modal-btn-green { background: #34c759; color: white; margin-top: 8px; }
-    .modal-btn-red { background: #ff3b30; color: white; margin-top: 8px; }
     .luoghi-hidden { display: none; }
     .report-hidden { display: none; }
     .search-wrap { background: white; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
@@ -254,7 +250,7 @@
 </div>
 
 <footer style="text-align:center; padding: 10px 0 30px;">
-  <div class="version-label">v2.0</div>
+  <div class="version-label">v2.1</div>
   <div class="licenza-badge" id="licenza-badge"></div>
   <div class="footer-links">
     <button class="footer-link" onclick="apriModal('modal-guida')">come si usa</button>
@@ -423,7 +419,7 @@
       </div>
       <div class="guida-section">
         <div class="guida-section-title"><span class="guida-section-icon">🏗</span> Giornata lavorativa</div>
-        <div class="guida-section-text">Seleziona il luogo di lavoro, la data e gli eventuali straordinari. Premi "Registra Giornata" per salvare.</div>
+        <div class="guida-section-text">Seleziona il luogo di lavoro, la data e gli eventuali straordinari. Premi "Registra Giornata" per salvare. Puoi registrare più cantieri nella stessa giornata — compariranno tutti nel PDF.</div>
       </div>
       <div class="guida-section">
         <div class="guida-section-title"><span class="guida-section-icon">📋</span> Assenze / Permessi</div>
@@ -459,7 +455,6 @@
 </div>
 
 <script>
-  const SECRET_KEY = 'WL-SECRET-2026-MIRKO';
   const BIN_ID = '69bbe428b7ec241ddc81c800';
   const MASTER_KEY = '$2a$10$VJdIi0M/eR8XUzboKW9s8eIhyUgJ6vDoNb7pJFgo4oNXjmvp5qzg6';
   const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -882,11 +877,9 @@
     const cerca = (document.getElementById('cerca-report').value || '').toLowerCase().trim();
     const prefisso = getPrefissoMese();
     const labelMap = { lavoro: 'Lavorato', reperibilità: 'Reperibilità', ferie: 'Ferie', permesso: 'Permesso', malattia: 'Malattia', spesa: 'Spesa' };
-
     let logFiltrato = [...window.log]
       .filter(r => r.dataISO && r.dataISO.startsWith(prefisso))
       .sort((a, b) => (b.dataISO || '').localeCompare(a.dataISO || ''));
-
     if (cerca) {
       logFiltrato = logFiltrato.filter(r =>
         (r.data || '').toLowerCase().includes(cerca) ||
@@ -897,11 +890,9 @@
         (r.importo ? r.importo.toString() : '').includes(cerca)
       );
     }
-
     document.getElementById('risultati-count').textContent = logFiltrato.length + ' risultat' + (logFiltrato.length === 1 ? 'o' : 'i');
     const btnCancella = document.getElementById('cancella-mese-btn');
     btnCancella.style.display = logFiltrato.length > 0 ? 'block' : 'none';
-
     if (logFiltrato.length === 0) {
       div.innerHTML = '<div class="empty-state">' + (cerca ? 'Nessun risultato per "' + cerca + '"' : 'Nessuna registrazione per questo mese') + '</div>';
       return;
@@ -949,17 +940,26 @@
         const dayObj = new Date(dataISO + 'T12:00:00');
         const dayName = giorniSett[dayObj.getDay()];
         const eventiGiorno = window.log.filter(l => l.dataISO === dataISO);
-        const lavorato = eventiGiorno.find(e => e.tipo === 'lavoro');
+
+        // Gestione più cantieri nella stessa giornata
+        const lavoriGiorno = eventiGiorno.filter(e => e.tipo === 'lavoro');
         const rep = eventiGiorno.find(e => e.tipo === 'reperibilità');
         const ferie = eventiGiorno.find(e => e.tipo === 'ferie');
         const permesso = eventiGiorno.find(e => e.tipo === 'permesso');
         const malattia = eventiGiorno.find(e => e.tipo === 'malattia');
+
         let statoParti = [], attivitaParti = [], straordinari = '';
-        if (lavorato) { statoParti.push('L'); attivitaParti.push(lavorato.cantiere); straordinari = lavorato.straordinari || ''; }
+        if (lavoriGiorno.length > 0) {
+          statoParti.push('L');
+          lavoriGiorno.forEach(l => attivitaParti.push(l.cantiere));
+          const totStraord = lavoriGiorno.reduce((s, l) => s + parseFloat(l.straordinari || 0), 0);
+          straordinari = totStraord > 0 ? String(totStraord) : '';
+        }
         if (permesso) { statoParti.push('P'); attivitaParti.push('Permesso (' + (permesso.orePermesso || '') + 'h)'); }
-        if (rep && !lavorato) statoParti.push('RP');
-        if (ferie && !lavorato) statoParti.push('F');
-        if (malattia && !lavorato) statoParti.push('M');
+        if (rep && lavoriGiorno.length === 0) statoParti.push('RP');
+        if (ferie && lavoriGiorno.length === 0) statoParti.push('F');
+        if (malattia && lavoriGiorno.length === 0) statoParti.push('M');
+
         const stato = statoParti.join('-');
         const attivita = attivitaParti.join(' | ');
         const speseGiorno = eventiGiorno.filter(e => e.tipo === 'spesa');
