@@ -2,7 +2,7 @@
   "name": "Worklog",
   "short_name": "Worklog",
   "description": "App per la rendicontazione lavorativa",
-  "start_url": "/Worklog/",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#f2f2f7",
   "theme_color": "#ff6b00",
